@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="referrer" content="no-referrer"/>
+<meta http-equiv="Content-Security-Policy" content="connect-src https://script.google.com https://*.googleusercontent.com; img-src 'self' data: blob: https://gmu.ac.ae; base-uri 'none'; form-action 'none'; object-src 'none'"/>
+<script src="config.js"></script>
+<title>GMU Walk-in Support — Check In</title>
+<style>
+  :root{--navy:#0e1b33;--navy2:#13294f;--teal:#0a7ea4;--gold:#c8972b;--gold2:#e0b347;--light:#eef3f9;--surface:#fff;--border:#d6e0ec;--text:#152536;--muted:#5d6e80;--red:#d32f2f;--green:#1b7a46;--radius:16px;--shadow:0 12px 34px rgba(14,27,51,.12);}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(160deg,#0e1b33,#13294f 55%,#0a7ea4);min-height:100vh;color:var(--text);padding:20px 16px;}
+  .shell{max-width:620px;margin:0 auto;}
+  .head{text-align:center;color:#fff;margin-bottom:18px;}
+  .head .logo{width:58px;height:58px;border-radius:14px;background:#fff;padding:7px;object-fit:contain;box-shadow:0 4px 14px rgba(0,0,0,.3);}
+  .head h1{font-size:1.5rem;font-weight:800;margin-top:12px;letter-spacing:.3px;}
+  .head p{color:#bcd6f2;font-size:.9rem;margin-top:4px;}
+  .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+  .card-body{padding:24px;}
+  .fg{display:flex;flex-direction:column;gap:7px;margin-bottom:18px;}
+  label{font-size:.9rem;font-weight:700;color:var(--navy);}label .req{color:var(--red);}
+  input,select,textarea{width:100%;padding:14px 15px;border:1.5px solid var(--border);border-radius:11px;font-size:1rem;color:var(--text);font-family:inherit;background:#fcfdff;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,126,164,.14);background:#fff;}
+  textarea{resize:vertical;min-height:90px;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .type-option input{position:absolute;opacity:0;width:0;}
+  .type-option label{display:block;padding:16px;text-align:center;border:2px solid var(--border);border-radius:12px;cursor:pointer;font-weight:700;font-size:1rem;background:#f7fafd;}
+  .type-option input:checked+label{background:linear-gradient(120deg,var(--navy),var(--teal));color:#fff;border-color:transparent;}
+  .prio{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .prio input{position:absolute;opacity:0;width:0;}
+  .prio label{display:block;padding:13px 6px;text-align:center;border:2px solid var(--border);border-radius:11px;cursor:pointer;font-weight:700;font-size:.9rem;background:#f7fafd;}
+  .lo input:checked+label{background:#1b7a46;color:#fff;border-color:transparent;}
+  .me input:checked+label{background:#2563eb;color:#fff;border-color:transparent;}
+  .hi input:checked+label{background:#cc6600;color:#fff;border-color:transparent;}
+  .ur input:checked+label{background:#cc0000;color:#fff;border-color:transparent;}
+  .btn{width:100%;padding:17px;background:linear-gradient(120deg,var(--gold),var(--gold2));color:#fff;border:none;border-radius:var(--radius);font-size:1.1rem;font-weight:800;cursor:pointer;letter-spacing:.4px;box-shadow:0 8px 20px rgba(200,151,43,.35);}
+  .btn:disabled{opacity:.6;cursor:not-allowed;}
+  .err{color:var(--red);font-size:.8rem;display:none;margin-top:2px;}
+  .input-error{border-color:var(--red)!important;}
+  .success{display:none;text-align:center;padding:46px 24px;}
+  .ring{width:90px;height:90px;margin:0 auto 20px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#26a65b,#1b7a46);color:#fff;display:flex;align-items:center;justify-content:center;font-size:2.6rem;box-shadow:0 10px 26px rgba(27,122,70,.35);}
+  .success h2{color:var(--green);font-size:1.5rem;margin-bottom:10px;}
+  .success p{color:var(--muted);font-size:.95rem;margin-bottom:6px;}
+  .qnum{display:inline-block;background:linear-gradient(120deg,var(--navy),var(--teal));color:#fff;padding:14px 34px;border-radius:50px;font-weight:800;font-size:1.3rem;margin:16px 0;letter-spacing:1px;}
+  .qnum.pending{background:#e8eef6;color:#5d6e80;font-size:1rem;letter-spacing:0;animation:pulse 1.2s infinite;}
+  @keyframes pulse{50%{opacity:.55;}}
+  .save-state{font-size:.86rem;color:var(--muted);margin:6px 0;}
+  .save-state.ok{color:var(--green);font-weight:700;}
+  .save-state.warn{color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px;line-height:1.5;}
+  .notice-err{background:#fff3f3;border:1px solid #f3c2c2;border-left:5px solid #d32f2f;color:#9b1c1c;border-radius:10px;padding:12px 14px;font-size:.9rem;margin-bottom:14px;line-height:1.5;}
+  .btn-again:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-again{margin-top:14px;padding:13px 34px;background:var(--navy);color:#fff;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-size:1rem;}
+  @media (max-width:520px){.row,.type-grid{grid-template-columns:1fr;}.prio{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="head">
+    <img class="logo" src="https://gmu.ac.ae/wp-content/uploads/2026/02/cropped-gmu-fav-2026-270x270.png" onerror="this.style.display='none'" alt="GMU"/>
+    <h1>Walk-in Support Check-in</h1>
+    <p>Gulf Medical University — IT &amp; E-Learning Desk</p>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="notice-err" id="rejectBanner" style="display:none;" role="alert"></div>
+      <div id="form">
+        <div class="fg"><label>Full Name <span class="req">*</span></label><input type="text" id="name" placeholder="Your name"/><span class="err" id="e-name">Please enter your name.</span></div>
+        <div class="fg"><label>I am a <span class="req">*</span></label>
+          <div class="type-grid">
+            <div class="type-option"><input type="radio" name="ut" id="uS" value="Student"/><label for="uS">🎓 Student</label></div>
+            <div class="type-option"><input type="radio" name="ut" id="uF" value="Staff"/><label for="uF">👔 Staff / Faculty</label></div>
+          </div><span class="err" id="e-ut">Please choose one.</span></div>
+        <div class="row">
+          <div class="fg"><label id="regLabel">Registration / Employee Number <span class="req">*</span></label><input type="text" id="regEmpId" placeholder="Select user type first"/><span class="err" id="e-reg">Required.</span></div>
+          <div class="fg"><label>College / Department</label>
+            <select id="college"><option value="">— Select —</option><option>College of Medicine</option><option>College of Dentistry</option><option>College of Pharmacy</option><option>College of Health Sciences</option><option>College of Nursing</option><option>Thumbay College of Management and AI in Healthcare</option><option>Thumbay College of Veterinary Medicine</option><option>General Education Department</option><option>IT Department / E-Learning Center</option><option>Administration / Management</option><option>Other Department</option></select></div>
+        </div>
+        <div class="row">
+          <div class="fg"><label id="emailLabel">Official Email <span class="req">*</span></label><input type="email" id="email" placeholder="Select user type first"/><span class="err" id="e-email">Enter a valid official email.</span></div>
+          <div class="fg"><label>Phone</label><input type="tel" id="phone" placeholder="Optional"/></div>
+        </div>
+        <div class="row">
+          <div class="fg"><label>Issue Category <span class="req">*</span></label>
+            <select id="category"><option value="">— Select —</option><option>Moodle LMS</option><option>Microsoft 365</option><option>Google Workspace</option><option>Official / Institutional Email</option><option>Assessment Portal (ExamSoft)</option><option>Zoom / Video Conferencing</option><option>Laptop / Device Issue</option><option>Wi-Fi / Network</option><option>Classroom / AV Support</option><option>Printer / Peripheral</option><option>Other / General Request</option></select>
+            <span class="err" id="e-cat">Please select a category.</span></div>
+          <div class="fg"><label>Priority</label><select id="priority"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select></div>
+        </div>
+        <div class="fg"><label>Describe your issue <span class="req">*</span></label><textarea id="desc" placeholder="Briefly describe what you need help with"></textarea><span class="err" id="e-desc">Please describe your issue.</span></div>
+        <button class="btn" id="btn" onclick="submitWalkin()">✓ Check In at the Desk</button>
+      </div>
+
+      <div class="success" id="success">
+        <div class="ring">✓</div>
+        <h2>You're Checked In!</h2>
+        <p>Please take a seat. Our team will call your name shortly.</p>
+        <p>Your token number:</p>
+        <div class="qnum pending" id="qnum">Issuing…</div>
+        <div class="save-state" id="saveState" role="status">⏳ Saving…</div>
+        <button class="btn-again" id="againBtn" onclick="resetForm()" disabled>Check In Another Visitor</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =======================================================================
+   PASTE YOUR DEPLOYED APPS SCRIPT WEB APP URL BELOW (the one ending /exec)
+   ======================================================================= */
+const SCRIPT_URL = (window.GMU_CONFIG && window.GMU_CONFIG.execUrl) || "PASTE_YOUR_EXEC_URL_HERE";   // normally set once in config.js
+/* ===================================================================== */
+
+/* Wakes the server while the visitor is still typing, and sends the queued e-mails right after a submission. */
+function warm(){ if(SCRIPT_URL.indexOf("PASTE_")===0) return; try{ fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"ping"}),keepalive:true}).catch(function(){}); }catch(e){} }
+function flushSoon(){ if(SCRIPT_URL.indexOf("PASTE_")===0) return; try{ fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"flushOutbox"}),keepalive:true}).catch(function(){}); }catch(e){} }
+warm();
+
+const STUDENT_DOMAINS=["mygmu.ac.ae"];
+const STAFF_SUFFIXES=["gmu.ac.ae","mygmu.ac.ae","thumbay.com"];
+document.querySelectorAll('input[name="ut"]').forEach(r=>r.addEventListener("change",()=>{
+  const t=document.querySelector('input[name="ut"]:checked')?.value;
+  const rl=document.getElementById("regLabel"),ri=document.getElementById("regEmpId"),el=document.getElementById("emailLabel"),ei=document.getElementById("email");
+  if(t==="Student"){rl.innerHTML='Registration Number <span class="req">*</span>';ri.placeholder='e.g. 2024XXXXXX';el.innerHTML='Official Email <span class="req">*</span>';ei.placeholder='registrationno@mygmu.ac.ae';}
+  else{rl.innerHTML='Employee ID Number <span class="req">*</span>';ri.placeholder='Your employee ID';el.innerHTML='Official Email <span class="req">*</span>';ei.placeholder='name@gmu.ac.ae / @mygmu.ac.ae / @it.thumbay.com';}
+}));
+function domainOk(email,type){const m=/@([^@]+)$/.exec(String(email).toLowerCase().trim());if(!m)return false;const dom=m[1];if(type==="Student")return STUDENT_DOMAINS.indexOf(dom)>-1;return STAFF_SUFFIXES.some(s=>dom===s||dom.endsWith("."+s));}
+
+function v(id){return document.getElementById(id).value.trim();}
+function valid(){
+  let ok=true;
+  [["name","e-name",x=>x.length>1],["regEmpId","e-reg",x=>x.length>0],["category","e-cat",x=>x!==""],["desc","e-desc",x=>x.length>3]].forEach(([id,eid,fn])=>{
+    const el=document.getElementById(id),er=document.getElementById(eid);
+    if(!fn(el.value.trim())){el.classList.add("input-error");er.style.display="block";ok=false;}else{el.classList.remove("input-error");er.style.display="none";}
+  });
+  const ut=document.querySelector('input[name="ut"]:checked');document.getElementById("e-ut").style.display=ut?"none":"block";if(!ut)ok=false;
+  const em=v("email"),emEl=document.getElementById("email"),emErr=document.getElementById("e-email"),type=ut?ut.value:"";
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){emErr.textContent="Enter a valid email.";emEl.classList.add("input-error");emErr.style.display="block";ok=false;}
+  else if(type&&!domainOk(em,type)){emErr.textContent=type==="Student"?"Students must use their @mygmu.ac.ae email.":"Use your official GMU / Thumbay email.";emEl.classList.add("input-error");emErr.style.display="block";ok=false;}
+  else{emEl.classList.remove("input-error");emErr.style.display="none";}
+  return ok;
+}
+
+
+/* ============ INSTANT, BACKGROUND SUBMISSION ============
+   The visitor sees "ticket raised" at once. The saving happens behind the scenes:
+   • every submission carries a unique ID, so a retry or a double-click can never create two tickets;
+   • a hiccup in the connection is retried automatically; if the connection drops, the request is kept on this
+     device and sent when it returns (even the next time the page is opened);
+   • only a real refusal from the server (e.g. an invalid entry) brings the form back, with everything still filled in. */
+const PENDING_KEY="gmu_pending_submission";
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function newId(){ try{ if(window.crypto&&crypto.randomUUID) return crypto.randomUUID(); }catch(e){} return "c-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,12); }
+const TRANSIENT=/something went wrong|try again/i;
+async function sendReliably(body,keepalive){
+  let wait=700;
+  for(let i=0;i<7;i++){
+    try{
+      const res=await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify(body),keepalive:!!keepalive});
+      const j=await res.json();
+      if(j&&(j.ok||!TRANSIENT.test(j.error||""))) return j;     // a real answer: saved, or a definite refusal
+    }catch(e){}
+    await sleep(wait); wait=Math.min(wait*2,8000);
+  }
+  return null;                                                   // the server could not be reached
+}
+function savePending(p){ try{ localStorage.setItem(PENDING_KEY,JSON.stringify(p)); }catch(e){} }
+function readPending(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY)||"null"); }catch(e){ return null; } }
+function clearPending(){ try{ localStorage.removeItem(PENDING_KEY); }catch(e){} }
+function say(id,text,cls){ const e=document.getElementById(id); if(!e) return; e.textContent=text; e.className="save-state"+(cls?" "+cls:""); }
+
+let submitting=false;
+function submitWalkin(){
+  if(submitting||!valid()) return;
+  if(SCRIPT_URL==="PASTE_YOUR_EXEC_URL_HERE"){alert("Setup required: paste your Apps Script /exec URL into config.js.");return;}
+  submitting=true; document.getElementById("rejectBanner").style.display="none";
+  const data={name:v("name"),userType:document.querySelector('input[name="ut"]:checked')?.value||"",college:v("college"),
+    regEmpId:v("regEmpId"),gmuEmail:v("email"),phone:v("phone"),category:v("category"),
+    subcategory:"Walk-in request",description:v("desc"),priority:v("priority"),source:"Walk-in",clientId:newId()};
+  savePending({data:data,at:Date.now()});
+  const q=document.getElementById("qnum"); q.textContent="Issuing…"; q.className="qnum pending";      // ← "checked in" is shown immediately
+  say("saveState","⏳ Saving…"); document.getElementById("againBtn").disabled=true;
+  document.getElementById("form").style.display="none"; document.getElementById("success").style.display="block";
+  run(data);                                                                                         // ← saving continues in the background
+}
+async function run(data){
+  const j=await sendReliably({action:"submitTicket",data:data},true);
+  if(!j){ say("saveState","⚠ No connection right now. Your check-in is kept on this device and will be sent automatically when you are online. Please keep this page open.","warn");
+    const again=()=>{ window.removeEventListener("online",again); say("saveState","⏳ Sending…"); run(data); }; window.addEventListener("online",again); return; }
+  if(!j.ok){ clearPending(); submitting=false;
+    document.getElementById("success").style.display="none"; document.getElementById("form").style.display="block";
+    const b=document.getElementById("rejectBanner"); b.textContent="Check-in could not be completed: "+(j.error||"please check the entries and try again.")+" Your entries are still here."; b.style.display="block";
+    const btn=document.getElementById("btn"); btn.disabled=false; btn.textContent="✓ Check In at the Desk"; return; }
+  clearPending(); const q=document.getElementById("qnum"); q.textContent=j.ticketId; q.className="qnum";
+  say("saveState","✓ Saved","ok"); document.getElementById("againBtn").disabled=false; flushSoon();
+}
+(async function resumePending(){
+  const p=readPending(); if(!p||!p.data||SCRIPT_URL.indexOf("PASTE_")===0) return;
+  if(Date.now()-p.at>6*3600*1000){ clearPending(); return; }
+  const j=await sendReliably({action:"submitTicket",data:p.data}); if(j&&(j.ok||j.error)) clearPending(); if(j&&j.ok) flushSoon();
+})();
+
+function resetForm(){
+  submitting=false;
+  ["name","regEmpId","email","phone","desc"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("college").value="";document.getElementById("category").value="";document.getElementById("priority").value="Medium";
+  document.querySelectorAll('input[name="ut"]').forEach(r=>r.checked=false);
+  document.getElementById("form").style.display="block";document.getElementById("success").style.display="none";document.getElementById("rejectBanner").style.display="none";
+  const b=document.getElementById("btn");b.disabled=false;b.textContent="✓ Check In at the Desk";
+}
+</script>
+</body>
+</html>
