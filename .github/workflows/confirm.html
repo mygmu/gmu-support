@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="referrer" content="no-referrer"/>
+<meta http-equiv="Content-Security-Policy" content="connect-src https://script.google.com https://*.googleusercontent.com; img-src 'self' data: blob: https://gmu.ac.ae; base-uri 'none'; form-action 'none'; object-src 'none'"/>
+<script src="config.js"></script>
+<title>GMU Support — Respond to Your Ticket</title>
+<style>
+  :root{--navy:#0e1b33;--navy2:#13294f;--teal:#0a7ea4;--gold:#c8972b;--green:#1b7a46;--orange:#cc6600;--surface:#fff;--border:#d6e0ec;--text:#152536;--muted:#5d6e80;--red:#cc2200;--shadow:0 12px 34px rgba(14,27,51,.12);}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(160deg,#0e1b33,#13294f 55%,#0a7ea4);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;color:var(--text);}
+  .card{background:var(--surface);border-radius:18px;box-shadow:var(--shadow);max-width:500px;width:100%;overflow:hidden;}
+  .top{background:linear-gradient(120deg,var(--navy),var(--teal));padding:26px;text-align:center;color:#fff;}
+  .top img{width:52px;height:52px;border-radius:12px;background:#fff;padding:6px;object-fit:contain;}
+  .top h1{font-size:1.3rem;font-weight:800;margin-top:12px;}
+  .top p{color:#bcd6f2;font-size:.85rem;margin-top:3px;}
+  .gold{height:4px;background:var(--gold);}
+  .body{padding:28px 26px;text-align:center;}
+  .body h2{font-size:1.15rem;color:var(--navy);margin-bottom:6px;}
+  .body .sub{font-size:.88rem;color:var(--muted);margin-bottom:22px;line-height:1.5;}
+  .fgrp{text-align:left;margin-bottom:14px;}
+  .fgrp label{display:block;font-size:.82rem;font-weight:700;color:var(--navy);margin-bottom:6px;}
+  .fgrp input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;background:#fcfdff;font-family:inherit;}
+  .fgrp input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,126,164,.14);}
+  .btn-row{display:flex;flex-direction:column;gap:12px;}
+  .btn{padding:15px;border:none;border-radius:12px;font-size:1rem;font-weight:800;cursor:pointer;color:#fff;width:100%;}
+  .btn-yes{background:linear-gradient(120deg,#1b7a46,#26a65b);}
+  .btn-no{background:linear-gradient(120deg,#cc6600,#e08a2b);}
+  .btn-nav{background:linear-gradient(120deg,var(--navy),var(--teal));}
+  .btn:disabled{opacity:.6;cursor:not-allowed;}
+  .linkback{display:inline-block;margin-top:14px;font-size:.84rem;color:var(--muted);cursor:pointer;text-decoration:underline;background:none;border:none;}
+  .stars{font-size:3rem;cursor:pointer;display:flex;justify-content:center;gap:8px;margin-bottom:6px;}
+  .stars span{color:#d4dbe4;transition:transform .12s,color .12s;}
+  .stars span:hover{transform:scale(1.15);}
+  .stars span.on{color:var(--gold);}
+  .rate-label{font-size:.85rem;color:var(--muted);height:20px;margin-bottom:16px;font-weight:600;}
+  textarea{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:11px;font-size:.9rem;font-family:inherit;min-height:90px;resize:vertical;margin-bottom:16px;background:#fcfdff;}
+  textarea:focus{outline:none;border-color:var(--teal);}
+  .ring{width:84px;height:84px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.4rem;color:#fff;}
+  .ring-green{background:radial-gradient(circle at 30% 30%,#26a65b,#1b7a46);}
+  .ring-orange{background:radial-gradient(circle at 30% 30%,#e08a2b,#cc6600);}
+  .ring-blue{background:radial-gradient(circle at 30% 30%,#3b82f6,#0a7ea4);}
+  .big-stars{font-size:2rem;color:var(--gold);margin:12px 0;}
+  .tags-label{font-size:.85rem;color:var(--muted);font-weight:600;margin:2px 0 8px;min-height:18px;}
+  .tags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 14px;}
+  .tag{border:1.5px solid var(--border);background:#f7fafd;border-radius:50px;padding:7px 13px;font-size:.82rem;cursor:pointer;color:var(--text);font-family:inherit;}
+  .tag.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .err{color:var(--red);font-size:.85rem;margin-top:10px;display:none;}
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="top">
+    <img src="https://gmu.ac.ae/wp-content/uploads/2026/02/cropped-gmu-fav-2026-270x270.png" onerror="this.style.display='none'" alt="GMU"/>
+    <h1>Respond to Your Ticket</h1>
+    <p>Gulf Medical University — IT &amp; E-Learning Support</p>
+  </div>
+  <div class="gold"></div>
+  <div class="body">
+
+    <!-- STEP 0: VERIFY -->
+    <div id="step-verify">
+      <div class="sub hidden" id="vWait">Checking your link…</div>
+      <h2>Let's find your ticket</h2>
+      <div class="sub">Enter the Ticket ID shown in our email and the official email address you used when raising the ticket.</div>
+      <div class="fgrp"><label for="vId">Ticket ID</label><input type="text" id="vId" placeholder="e.g. GMU-26-0002" autocomplete="off"/></div>
+      <div class="fgrp"><label for="vEmail">Official Email Address</label><input type="email" id="vEmail" placeholder="name@mygmu.ac.ae" autocomplete="email" onkeydown="if(event.key==='Enter')verify()"/></div>
+      <button class="btn btn-nav" id="vBtn" onclick="verify()">Continue</button>
+      <div class="err" id="err0"></div>
+    </div>
+
+    <!-- STEP 1: CHOICE -->
+    <div id="step-confirm" class="hidden">
+      <h2 id="confirmHeading">Has your issue been fully resolved?</h2>
+      <div class="sub" id="ticketRef"></div>
+      <div class="btn-row">
+        <button class="btn btn-yes" id="yesBtn" onclick="confirmResolved()">✅ Yes — my issue is resolved</button>
+        <button class="btn btn-no" onclick="show('step-reopen')">⚠️ No — I still need help</button>
+      </div>
+      <div class="err" id="err1"></div>
+    </div>
+
+    <!-- STEP 2a: REOPEN -->
+    <div id="step-reopen" class="hidden">
+      <div class="ring ring-orange">!</div>
+      <h2>Tell us what's still not working</h2>
+      <div class="sub">Add any details or new information. Our team will reopen your ticket and follow up.</div>
+      <textarea id="reopenNote" placeholder="Please describe what is still not working, and anything you have already tried…"></textarea>
+      <button class="btn btn-no" id="reopenBtn" onclick="submitReopen()">Reopen My Ticket &amp; Notify Support</button>
+      <button class="linkback" onclick="show('step-confirm')">← Back</button>
+      <div class="err" id="err2"></div>
+    </div>
+
+    <!-- STEP 2b: RATE -->
+    <div id="step-rate" class="hidden">
+      <h2>Thank you! Please rate your experience</h2>
+      <div class="sub">Your feedback helps us improve our service.</div>
+      <div class="stars" id="stars"><span data-n="1">★</span><span data-n="2">★</span><span data-n="3">★</span><span data-n="4">★</span><span data-n="5">★</span></div>
+      <div class="rate-label" id="rateLabel"></div>
+      <div class="tags-label" id="tagsLabel"></div>
+      <div class="tags" id="tags"></div>
+      <textarea id="comment" placeholder="Any comments? (optional)"></textarea>
+      <button class="btn btn-yes" id="rateBtn" onclick="submitRating()">Submit Feedback</button>
+      <div class="err" id="err3"></div>
+    </div>
+
+    <div id="netNote" style="display:none;margin-top:14px;font-size:.84rem;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:9px 12px;line-height:1.5;" role="status"></div>
+
+    <!-- DONE -->
+    <div id="step-done" class="hidden">
+      <div class="ring ring-green" id="doneRing">✓</div>
+      <h2 id="doneTitle">Thank You!</h2>
+      <div class="big-stars hidden" id="bigStars"></div>
+      <p style="color:var(--muted);font-size:.9rem;line-height:1.5;" id="doneMsg"></p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* =======================================================================
+   PASTE YOUR DEPLOYED APPS SCRIPT WEB APP URL BELOW (the one ending /exec)
+   ======================================================================= */
+const SCRIPT_URL = (window.GMU_CONFIG && window.GMU_CONFIG.execUrl) || "PASTE_YOUR_EXEC_URL_HERE";   // normally set once in config.js
+/* ===================================================================== */
+
+/* Wakes the server while the visitor is still typing, and sends the queued e-mails right after a submission. */
+function warm(){ if(SCRIPT_URL.indexOf("PASTE_")===0) return; try{ fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"ping"}),keepalive:true}).catch(function(){}); }catch(e){} }
+function flushSoon(){ if(SCRIPT_URL.indexOf("PASTE_")===0) return; try{ fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"flushOutbox"}),keepalive:true}).catch(function(){}); }catch(e){} }
+warm();
+
+const LABELS={1:"Poor",2:"Fair",3:"Good",4:"Very Good",5:"Excellent"};
+const STEPS=["step-verify","step-confirm","step-reopen","step-rate","step-done"];
+let rating=0, ticketId="", email="", info=null;
+
+/* Google Sites embeds drop the link's address, so we never depend on it:
+   the requester always chooses Yes/No on this page. If the address does
+   survive, we only use it to pre-fill the Ticket ID and, for a "reopen"
+   link, to open the comment box directly — never to auto-submit anything. */
+const params=new URLSearchParams(location.search);
+const preAction=(params.get("action")||"").toLowerCase();
+const linkTok=(params.get("t")||"").trim();      // signed code carried by the e-mail buttons
+let token="";                                     // set once the link has been verified
+function auth(){ return token?{ticketId:ticketId,token:token}:{ticketId:ticketId,email:email}; }
+document.getElementById("vId").value=(params.get("id")||"").trim().toUpperCase();
+
+function show(id){ STEPS.forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==id)); }
+function setErr(id,m){ const e=document.getElementById(id); e.textContent=m; e.style.display="block"; }
+function clearErr(id){ document.getElementById(id).style.display="none"; }
+function call(action,data){ return fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action,data})}).then(r=>r.json()); }
+function showDone(kind,title,msg,stars){
+  const ring=document.getElementById("doneRing");
+  ring.className="ring ring-"+kind; ring.textContent=(kind==="green")?"✓":(kind==="blue"?"i":"!");
+  document.getElementById("doneTitle").textContent=title;
+  document.getElementById("doneMsg").textContent=msg;
+  const bs=document.getElementById("bigStars");
+  if(stars){ bs.textContent="★".repeat(stars)+"☆".repeat(5-stars); bs.classList.remove("hidden"); } else bs.classList.add("hidden");
+  show("step-done");
+}
+
+// ── STEP 0: verify ──────────────────────────────────────────
+async function verify(){
+  clearErr("err0");
+  const id=document.getElementById("vId").value.trim().toUpperCase();
+  const em=document.getElementById("vEmail").value.trim();
+  if(!id||!em){ setErr("err0","Please enter both your Ticket ID and official email."); return; }
+  if(SCRIPT_URL==="PASTE_YOUR_EXEC_URL_HERE"){ setErr("err0","Setup required: paste your /exec URL into this file."); return; }
+  const btn=document.getElementById("vBtn"); btn.disabled=true; btn.textContent="Checking…";
+  try{
+    const j=await call("lookupTicket",{ticketId:id,email:em});
+    if(j.ok){ ticketId=j.ticketId; email=em; info=j; route(); }
+    else setErr("err0",j.error||"We could not verify your ticket.");
+  }catch(e){ setErr("err0","Connection error. Please try again."); }
+  btn.disabled=false; btn.textContent="Continue";
+}
+
+/* Opened from an e-mail button: the link carries the ticket number and a signed code, so no typing is needed.
+   If the link is incomplete or not valid, the Ticket ID + e-mail form below is used instead. */
+async function autoVerify(){
+  const id=(params.get("id")||"").trim().toUpperCase();
+  if(!id||!linkTok||SCRIPT_URL.indexOf("PASTE_")===0) return;
+  document.getElementById("vWait").classList.remove("hidden");
+  try{
+    const j=await call("lookupTicket",{ticketId:id,token:linkTok});
+    if(j.ok){ ticketId=j.ticketId; token=linkTok; info=j; document.getElementById("vWait").classList.add("hidden"); route(); return; }
+  }catch(e){}
+  document.getElementById("vWait").classList.add("hidden");
+  setErr("err0","We could not verify this link. Please enter your Ticket ID and official email below.");
+}
+autoVerify();
+
+function route(){
+  document.getElementById("ticketRef").textContent="Ticket "+info.ticketId+" — "+info.category+(info.name?" ("+info.name+")":"");
+  if(info.archived){
+    showDone("blue","Ticket Archived","Ticket "+info.ticketId+" was completed and has been archived, so it can no longer be changed here. If you still need help, please raise a new ticket or contact support@mygmu.ac.ae.");
+    return;
+  }
+  if(info.status==="Open"||info.status==="In Progress"){
+    showDone("blue","Your Ticket Is Being Handled","Ticket "+info.ticketId+" is currently "+info.status+". Our team will email you the solution shortly, and you can respond from that email.");
+    return;
+  }
+  document.getElementById("confirmHeading").textContent =
+    (info.status==="Closed") ? "This ticket was closed. Has your issue been resolved?" : "Has your issue been fully resolved?";
+  // Always present the explicit choice. A "reopen" link opens the comment box directly.
+  show(preAction==="reopen" ? "step-reopen" : "step-confirm");
+}
+
+// ── Sending: instant screens, saving continues in the background ─────────────────
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const TRANSIENT=/something went wrong|try again/i;
+async function sendReliably(action,data){                  // a real answer, or null if the server could not be reached
+  let wait=700;
+  for(let i=0;i<7;i++){ try{ const j=await call(action,data); if(j&&(j.ok||!TRANSIENT.test(j.error||""))) return j; }catch(e){} await sleep(wait); wait=Math.min(wait*2,8000); }
+  return null;
+}
+function note(msg){ const e=document.getElementById("netNote"); e.textContent=msg; e.style.display="block"; }
+function offlineNote(){ note("We could not reach the server just now. Your answer is kept on this device and will be sent automatically when the connection returns — please keep this page open."); }
+
+// ── Yes → confirm → rate ────────────────────────────────────
+let confirmP=null;
+function confirmResolved(){
+  clearErr("err1");
+  show("step-rate");                                                  // the rating page appears at once
+  confirmP=sendReliably("confirmResolution",Object.assign(auth(),{action:"confirm"}));
+  confirmP.then(j=>{
+    if(j&&j.ok) return;
+    if(j){ show("step-confirm"); setErr("err1",j.error||"Could not record your response."); }
+    else offlineNote();
+  });
+}
+
+// ── No → reopen (never leads to rating) ─────────────────────
+function submitReopen(){
+  clearErr("err2");
+  const text=document.getElementById("reopenNote").value.trim();
+  if(!text){ setErr("err2","Please describe what is still not working."); return; }
+  showDone("orange","Ticket Reopened","Thank you. Our team is being notified and your ticket ("+ticketId+") has been reopened. We will follow up with you shortly.");   // at once
+  sendReliably("confirmResolution",Object.assign(auth(),{action:"reopen",note:text})).then(j=>{
+    if(j&&j.ok){ flushSoon(); return; }
+    if(j){ show("step-reopen"); setErr("err2",j.error||"Could not submit."); }
+    else offlineNote();
+  });
+}
+
+// ── rating ──────────────────────────────────────────────────
+document.querySelectorAll("#stars span").forEach(s=>{
+  s.addEventListener("click",()=>setStars(Number(s.dataset.n)));
+  s.addEventListener("mouseenter",()=>paint(Number(s.dataset.n)));
+});
+document.getElementById("stars").addEventListener("mouseleave",()=>paint(rating));
+function paint(n){ document.querySelectorAll("#stars span").forEach(s=>s.classList.toggle("on",Number(s.dataset.n)<=n)); document.getElementById("rateLabel").textContent=n?LABELS[n]:""; }
+function setStars(n){ rating=n; paint(n); renderTags(); }
+const POS=["Fast response","Clear solution","Friendly and helpful"], NEG=["Took too long","Problem not fully solved","Had to explain several times"];
+let picked=[];
+function renderTags(){                                              // good scores ask "what went well?", others "what could be better?"
+  const box=document.getElementById("tags"); box.textContent="";
+  if(!rating){ document.getElementById("tagsLabel").textContent=""; return; }
+  const list=rating>=4?POS:NEG; picked=picked.filter(x=>list.indexOf(x)>-1);
+  document.getElementById("tagsLabel").textContent=rating>=4?"What went well? (optional)":"What could be better? (optional)";
+  list.forEach(t=>{ const b=document.createElement("button"); b.type="button"; b.className="tag"+(picked.indexOf(t)>-1?" on":""); b.textContent=t;
+    b.addEventListener("click",()=>{ const k=picked.indexOf(t); if(k>-1) picked.splice(k,1); else picked.push(t); b.classList.toggle("on"); }); box.appendChild(b); });
+}
+function submitRating(){
+  clearErr("err3");
+  if(!rating){ setErr("err3","Please select a star rating."); return; }
+  const payload=Object.assign(auth(),{stars:rating,comment:document.getElementById("comment").value.trim(),tags:picked.slice()});
+  showDone("green","Thank You!","Your feedback has been recorded and helps us improve our service.",rating);        // at once
+  (async()=>{
+    if(confirmP){ const cj=await confirmP; if(!cj||!cj.ok) return; }                                                // the confirmation always lands first
+    const j=await sendReliably("submitRating",payload);
+    if(j&&j.ok){ flushSoon(); return; }
+    if(j){ show("step-rate"); setErr("err3",j.error||"Could not record feedback."); }
+    else offlineNote();
+  })();
+}
+</script>
+</body>
+</html>
