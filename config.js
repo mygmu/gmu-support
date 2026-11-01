@@ -9,6 +9,6 @@
    all protection is applied by the server.
    ========================================================================== */
 window.GMU_CONFIG = {
-  execUrl: "PASTE_YOUR_EXEC_URL_HERE",
+  execUrl: "https://script.google.com/macros/s/AKfycbxU3TKzN5AD-B6A_uC7jNmRrP4NfkLIxTJDdEuZMqXOBCsQonsCquq-4L7nsBZt5W0V/exec",
   siteUrl: ""
 };
