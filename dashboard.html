@@ -343,7 +343,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
 
     <!-- QUEUE -->
     <div class="page" id="page-queue">
-      <div class="page-head"><div><h2>Ticket Queue</h2><div class="crumb">All submitted support tickets</div></div></div>
+      <div class="page-head"><div><h2>Ticket Queue</h2><div class="crumb">All submitted support tickets</div></div><button class="btn btn-outline" id="myTicketsBtn" onclick="showMine()">👤 My tickets (0)</button></div>
       <div class="queue-grid">
         <div class="q-left">
           <div class="q-filters">
@@ -537,12 +537,20 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
   <div class="modal-b">
     <div class="fg"><label>Full Name *</label><input type="text" id="ufName"/></div>
     <div class="fg"><label>Username *</label><input type="text" id="ufUser"/></div>
-    <div class="fg"><label>E-mail <span style="font-weight:400;color:var(--muted)">(optional — used to tell this person when a ticket is assigned to them)</span></label><input type="email" id="ufEmail" placeholder="name@gmu.ac.ae"/></div>
-    <div class="fg"><label id="ufPassLabel">Password *</label><input type="password" id="ufPass" placeholder="Set a password"/></div>
+    <div class="fg"><label>E-mail <span style="font-weight:400;color:var(--muted)">(sign-in details and ticket assignments are sent here)</span></label><input type="email" id="ufEmail" placeholder="name@gmu.ac.ae"/></div>
+    <div class="fg"><label id="ufPassLabel">Password *</label><input type="password" id="ufPass" placeholder="Leave blank to generate a temporary one" autocomplete="new-password"/></div>
+    <div id="ufSendRow"><label class="toggle"><input type="checkbox" id="ufSend" checked/> ✉ E-mail the sign-in details and the link to this person (they must choose their own password at first sign-in)</label></div>
+    <div id="ufResetRow" style="display:none;"><button class="btn btn-warning" type="button" onclick="resetUserPw()">🔑 Reset password &amp; e-mail a new temporary one</button></div>
     <div class="fg"><label>Roles (assign one or more) *</label><div class="role-checks" id="roleChecks"></div></div>
     <div class="fg"><label>Status</label><select id="ufStatus"><option>Active</option><option>Disabled</option></select></div>
   </div>
   <div class="modal-f"><button class="btn btn-outline" onclick="closeModal('userModal')">Cancel</button><button class="btn btn-success" onclick="saveUser()">💾 Save User</button></div></div></div>
+
+<!-- ONE-TIME TEMPORARY PASSWORD -->
+<div class="overlay" id="tempPwModal"><div class="modal" style="width:480px;max-width:94vw;"><div class="modal-h"><h3>🔑 Temporary password</h3><button class="modal-x" onclick="closeTempPw()">×</button></div>
+  <div class="modal-b"><p id="tempPwFor" style="font-size:.88rem;"></p><div id="tempPwVal" style="font-family:monospace;font-size:1.3rem;background:#f1f5f9;padding:14px;border-radius:8px;text-align:center;user-select:all;letter-spacing:.5px;"></div>
+  <p class="sat-sub" style="margin-top:10px;">This is shown <b>only once</b>. Give it to the person privately. They must choose their own password the first time they sign in.</p></div>
+  <div class="modal-f"><button class="btn btn-primary" onclick="closeTempPw()">Done</button></div></div></div>
 
 <!-- PASSWORD MODAL -->
 <div class="overlay" id="pwdModal"><div class="modal"><div class="modal-h"><h3>🔑 Change Password</h3><button class="modal-x" id="pwdClose" onclick="closeModal('pwdModal')">×</button></div>
@@ -710,6 +718,11 @@ function assigneeNames(){ const out=[]; assignees.concat(colleagues).forEach(n=>
 function assigneeOptions(selected){ const names=assigneeNames(); if(selected&&names.indexOf(selected)<0) names.push(selected); return names.map(n=>`<option ${n===selected?"selected":""}>${esc(n)}</option>`).join(""); }
 function buildAssigneeFilter(){ const f=document.getElementById("fAssignee"); if(!f) return; const cur=f.value||"All";
   f.innerHTML='<option value="All">Any assignee</option><option value="__me__">👤 My tickets</option><option value="__none__">Unassigned</option>'+assigneeNames().map(n=>`<option>${esc(n)}</option>`).join(""); f.value=[...f.options].some(o=>o.value===cur)?cur:"All"; }
+function myOpenCount(){ return allTickets.filter(t=>asgMatch(t,"__me__")&&(t.status==="Open"||t.status==="In Progress"||t.status==="Awaiting Confirmation")).length; }
+let toldMine=false;
+function updateMyCount(){ const n=myOpenCount(), b=document.getElementById("myTicketsBtn"); if(b){ b.textContent="👤 My tickets ("+n+")"; b.className="btn "+(n?"btn-primary":"btn-outline"); }
+  if(n&&!toldMine){ toldMine=true; toast("👤 You have "+n+" ticket"+(n===1?"":"s")+" assigned to you — click “My tickets”.",6000); } }
+function showMine(){ nav("queue"); document.getElementById("fStatus").value="All"; document.getElementById("fSearch").value=""; document.getElementById("fAssignee").value="__me__"; applyFilters(); }
 function asgMatch(t,f){ if(f==="All") return true; const a=String(t.assignedTo||"").toLowerCase(); if(f==="__none__") return !a; if(f==="__me__") return !!ME&&a===String(ME.name||"").toLowerCase(); return a===f.toLowerCase(); }
 function isActive(p){ const e=document.getElementById("page-"+p); return !!e&&e.classList.contains("active"); }
 function isSuperUser(){ return !!ME&&ME.roles.indexOf("Super Admin")>-1; }
@@ -722,8 +735,9 @@ async function refresh(){
   if(!hasPerm("view")) return;
   try{
     const res=await api("getDashboard"); if(!res.ok) return;
-    VER=res.v; allTickets=res.tickets; STATS=res.stats; assignees=res.assignees||assignees; buildAssigneeFilter();
+    VER=res.v; allTickets=res.tickets; STATS=res.stats; assignees=res.assignees||assignees;
     if(res.settings) applySettings(res.settings);
+    buildAssigneeFilter(); updateMyCount();
     renderStatCards(STATS); updateWalkBadge(); applyFilters(); checkNew(allTickets.length);
     if(isActive("dashboard")) renderDashboard();
     if(isActive("walkin")) renderWalkin();
@@ -810,6 +824,7 @@ function openTicket(id){ activeTicket=allTickets.find(t=>t.ticketId===id); if(!a
 
 function detailHTML(t){ return `
   <div class="dcard"><div class="titlebar"><div><h2>${esc(t.ticketId)} — ${esc(t.category)}</h2><div class="sub">Submitted: ${dt(t.timestamp)} · Source: ${esc(t.source)}${t.assignedTo?` · Assigned to: <strong>${esc(t.assignedTo)}</strong>`:""}</div></div><div class="badges"><span class="badge b-${skey(t.status)}">${esc(t.status)}</span><span class="badge b-${pcap(t.priority).toLowerCase()}">${esc(pcap(t.priority))}</span>${/Reopened/i.test(t.confirmation)?'<span class="badge b-reopen">↻ Reopened</span>':''}</div></div></div>
+  ${assignCardHTML(t)}
   <div class="dcard"><div class="dcard-h">👤 Submitter</div><div class="dcard-b"><div class="igrid">
     <div class="iitem"><label>Name</label><span>${esc(t.name)}</span></div><div class="iitem"><label>Type</label><span>${esc(t.userType)}</span></div>
     <div class="iitem"><label>${t.userType==='Student'?'Registration No':'Employee ID'}</label><span>${esc(t.regEmpId)||'—'}</span></div><div class="iitem"><label>College/Dept</label><span>${esc(t.college)}</span></div>
@@ -829,7 +844,6 @@ function detailHTML(t){ return `
     <div class="igrid">
       <div class="fg"><label>Status</label><select id="aStatus"><option ${t.status==="Open"?"selected":""}>Open</option><option ${t.status==="In Progress"?"selected":""}>In Progress</option><option ${t.status==="Awaiting Confirmation"?"selected":""}>Awaiting Confirmation</option><option ${t.status==="Resolved"?"selected":""}>Resolved</option><option ${t.status==="Closed"?"selected":""}>Closed</option></select></div>
       <div class="fg"><label>Resolved By</label><select id="aResolvedBy"><option value="">— Select —</option>${colleagues.map(c=>`<option ${t.resolvedBy===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div>
-      <div class="fg"><label>Assigned To</label><select id="aAssigned"><option value="">— Unassigned —</option>${assigneeOptions(t.assignedTo)}</select></div>
     </div>
     <div class="fg"><label>Solution / Resolution Notes</label><textarea id="aNotes" rows="3" placeholder="Write the solution or instructions for the requester…">${esc(t.resolutionNotes)}</textarea></div>
     ${hasPerm("email")?`<div class="arow">
@@ -845,12 +859,37 @@ function detailHTML(t){ return `
 }
 function renderAtt(att){ return String(att||"").split("\n").filter(Boolean).map(line=>{const p=line.split(" | ");const url=(p[1]||"").trim();return /^https:\/\//i.test(url)?`<a class="attach-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">📎 ${esc(p[0])}</a>`:`<span class="attach-link">📎 ${esc(p[0])}</span>`;}).join(""); }
 
+/* ── Assign a ticket to a colleague (who is e-mailed) ── */
+function assignCardHTML(t){
+  const now=t.assignedTo?`<strong>${esc(t.assignedTo)}</strong><span style="color:var(--muted);font-size:.8rem;">${t.assignedAt?" · since "+esc(dt(t.assignedAt)):""}${t.assignedBy?" · by "+esc(t.assignedBy):""}</span>`:'<span style="color:var(--muted);">Not assigned to anyone yet</span>';
+  if(!assignees.length) return `<div class="dcard"><div class="dcard-h">👤 Assign to a colleague</div><div class="dcard-b"><div>Currently: ${now}</div><div class="sat-sub" style="margin-top:8px;">There are no colleagues to assign to yet. Add them under <b>Users</b> (role Ticket Agent or Walk-in Desk) and they will appear here.</div></div></div>`;
+  return `<div class="dcard" style="border:2px solid #cfe3f3;"><div class="dcard-h">👤 Assign to a colleague</div><div class="dcard-b">
+    <div style="margin-bottom:10px;">Currently: ${now}</div>
+    <div class="arow" style="align-items:flex-end;">
+      <div class="fg" style="flex:1;min-width:180px;"><label>Assign to</label><select id="asgPerson"><option value="">— Choose a colleague —</option>${assignees.map(n=>`<option ${n===t.assignedTo?"selected":""}>${esc(n)}</option>`).join("")}</select></div>
+      <div class="fg" style="flex:2;min-width:220px;"><label>Note for them (optional)</label><input type="text" id="asgNote" maxlength="400" placeholder="e.g. Please call the student first — exam today."/></div>
+      <button class="btn btn-primary" onclick="assignNow()">📌 Assign &amp; notify</button>
+      ${t.assignedTo?'<button class="btn btn-outline" onclick="unassignNow()">Remove</button>':""}
+    </div>
+    <div class="sat-sub" style="margin-top:6px;">They are e-mailed straight away with the ticket details and a link to the console. Nothing else about the ticket changes.</div>
+  </div></div>`;
+}
+async function assignNow(){
+  if(!activeTicket) return; const who=gv("asgPerson"); if(!who){ toast("Please choose a colleague first."); return; }
+  afterAssign(await api("assignTicket",{ticketId:activeTicket.ticketId,assignedTo:who,note:document.getElementById("asgNote").value.trim()}),who);
+}
+async function unassignNow(){ if(!activeTicket||!confirm("Remove the assignment from this ticket?")) return; afterAssign(await api("assignTicket",{ticketId:activeTicket.ticketId,assignedTo:""}),""); }
+async function afterAssign(res,who){
+  if(!res.ok){ toast("❌ "+res.error); return; }
+  const warn={noEmail:"⚠ Assigned to "+who+", but there is no e-mail address saved for them, so they were NOT notified — please tell them (add the address under Users).",self:"✅ Assigned to you.",same:"✅ It is already assigned to "+who+"."};
+  toast(!who?"✅ Assignment removed.":res.notified?"✅ Assigned to "+who+" — they have been e-mailed.":(warn[res.reason]||"✅ Assigned to "+who+"."),res.reason==="noEmail"?9000:4500);
+  await loadAll(); const u=allTickets.find(x=>x.ticketId===activeTicket.ticketId); if(u){ activeTicket=u; openTicket(u.ticketId); }
+}
 async function saveAction(){
   if(!activeTicket)return;
   const payload={ticketId:activeTicket.ticketId,status:gv("aStatus"),resolvedBy:gv("aResolvedBy"),resolutionNotes:document.getElementById("aNotes").value.trim()};
-  const asg=gv("aAssigned"); if(asg!==(activeTicket.assignedTo||"")) payload.assignedTo=asg||"__none__";        // only when the person changed it
   const res=await api("updateTicket",payload);
-  if(res.ok){ toast(payload.assignedTo&&payload.assignedTo!=="__none__"?"✅ Saved — assigned to "+payload.assignedTo+".":"✅ Status saved."); await loadAll(); const u=allTickets.find(x=>x.ticketId===activeTicket.ticketId); if(u){activeTicket=u;openTicket(u.ticketId);} } else toast("❌ "+res.error);
+  if(res.ok){ toast("✅ Status saved."); await loadAll(); const u=allTickets.find(x=>x.ticketId===activeTicket.ticketId); if(u){activeTicket=u;openTicket(u.ticketId);} } else toast("❌ "+res.error);
 }
 
 /* ── read file inputs → base64 (for admin email attachments) ── */
@@ -1108,18 +1147,43 @@ async function loadUsers(){ const res=await api("getUsers"); if(!res.ok){documen
   </tr>`).join("")||`<tr><td colspan="6" class="no-tickets">No users.</td></tr>`;
 }
 function editUserIdx(i){ if(window._users&&window._users[i]) editUser(window._users[i]); }
-function openUserModal(){ editingUser=null; document.getElementById("userModalTitle").textContent="Add User"; document.getElementById("ufName").value="";document.getElementById("ufUser").value="";document.getElementById("ufEmail").value="";document.getElementById("ufUser").disabled=false;document.getElementById("ufPass").value="";document.getElementById("ufPassLabel").innerHTML="Password *";document.getElementById("ufStatus").value="Active"; renderRoleChecks([]); document.getElementById("userModal").classList.add("on"); }
-function editUser(u){ editingUser=u.username; document.getElementById("userModalTitle").textContent="Edit User"; document.getElementById("ufName").value=u.name;document.getElementById("ufUser").value=u.username;document.getElementById("ufEmail").value=u.email||"";document.getElementById("ufUser").disabled=true;document.getElementById("ufPass").value="";document.getElementById("ufPassLabel").innerHTML="Password <span style='font-weight:400;color:var(--muted)'>(leave blank to keep)</span>";document.getElementById("ufStatus").value=u.status; renderRoleChecks(u.roles); document.getElementById("userModal").classList.add("on"); }
+function openUserModal(){ editingUser=null; document.getElementById("userModalTitle").textContent="Add User"; document.getElementById("ufName").value="";document.getElementById("ufUser").value="";document.getElementById("ufEmail").value="";document.getElementById("ufUser").disabled=false;document.getElementById("ufPass").value="";document.getElementById("ufPassLabel").innerHTML="Temporary password <span style='font-weight:400;color:var(--muted)'>(leave blank to generate one)</span>";document.getElementById("ufSend").checked=true;document.getElementById("ufSendRow").style.display="block";document.getElementById("ufResetRow").style.display="none";document.getElementById("ufStatus").value="Active"; renderRoleChecks([]); document.getElementById("userModal").classList.add("on"); }
+function editUser(u){ editingUser=u.username; document.getElementById("userModalTitle").textContent="Edit User"; document.getElementById("ufName").value=u.name;document.getElementById("ufUser").value=u.username;document.getElementById("ufEmail").value=u.email||"";document.getElementById("ufUser").disabled=true;document.getElementById("ufPass").value="";document.getElementById("ufPassLabel").innerHTML="New password <span style='font-weight:400;color:var(--muted)'>(leave blank to keep)</span>";document.getElementById("ufSendRow").style.display="none";document.getElementById("ufResetRow").style.display="block";document.getElementById("ufStatus").value=u.status; renderRoleChecks(u.roles); document.getElementById("userModal").classList.add("on"); }
 function renderRoleChecks(sel){ document.getElementById("roleChecks").innerHTML=ALL_ROLES.map(r=>`<label><input type="checkbox" value="${esc(r)}" ${sel.indexOf(r)>-1?"checked":""}/> ${esc(r)}</label>`).join(""); }
 function getCheckedRoles(){ return [...document.querySelectorAll("#roleChecks input:checked")].map(i=>i.value); }
 async function saveUser(){
   const email=gv("ufEmail"),name=gv("ufName"),user=gv("ufUser"),pass=document.getElementById("ufPass").value,roles=getCheckedRoles(),status=gv("ufStatus");
   if(!name||!user){alert("Name and username required.");return;} if(!roles.length){alert("Assign at least one role.");return;}
+  const sendIt=!editingUser&&!!email&&document.getElementById("ufSend").checked;
   let res;
   if(editingUser){ res=await api("updateUser",{username:editingUser,name,roles,status,email,password:pass||undefined}); }
-  else{ if(!pass){alert("Password required for new user.");return;} res=await api("addUser",{username:user,name,password:pass,roles,status,email}); }
-  if(res.ok){closeModal("userModal");toast("✅ User saved.");loadUsers();}else toast("❌ "+res.error);
+  else{
+    if(!pass&&!sendIt){ alert("Either type a password, or enter the person's e-mail address and keep “E-mail the sign-in details” ticked — a temporary password is then generated and sent to them."); return; }
+    res=await api("addUser",{username:user,name,password:pass||undefined,roles,status,email,sendWelcome:sendIt});
+  }
+  if(!res.ok){ toast("❌ "+res.error); return; }
+  closeModal("userModal"); loadUsers();
+  if(editingUser) toast("✅ User saved.");
+  else if(res.welcomeSent) toast("✅ User created — the sign-in details and link were e-mailed to "+email+".",6000);
+  else if(sendIt) toast("⚠ User created, but the e-mail could not be sent. Open the user and use “Reset password & e-mail” once the address is correct.",9000);
+  else toast("✅ User created. Give them their password privately — they must choose their own at first sign-in.",6000);
 }
+/* A forgotten password: a new temporary one is e-mailed; with no e-mail address it is shown once so it can be handed over. */
+async function resetUserPw(){
+  if(!editingUser) return; const who=editingUser;
+  if(!confirm("Issue a new temporary password for “"+who+"”? Their current password will stop working immediately and they will be signed out.")) return;
+  const res=await api("resetUserPassword",{username:who});
+  if(!res.ok){ toast("❌ "+res.error); return; }
+  closeModal("userModal");
+  if(res.emailed) toast("✅ A new temporary password was e-mailed to "+who+".",6000);
+  else showTempPassword(who,res.tempPassword);
+  loadUsers();
+}
+function showTempPassword(who,pw){
+  document.getElementById("tempPwFor").textContent="New temporary password for “"+who+"” (no e-mail address is saved for this person):";
+  document.getElementById("tempPwVal").textContent=pw; document.getElementById("tempPwModal").classList.add("on");
+}
+function closeTempPw(){ document.getElementById("tempPwVal").textContent=""; document.getElementById("tempPwModal").classList.remove("on"); }
 async function unlockUser(u){ const res=await api("unlockUser",{username:u}); if(res.ok){ toast("🔓 Sign-in unlocked for "+u+"."); loadUsers(); } else toast("❌ "+res.error); }
 async function delUser(u){ if(!confirm("Delete user '"+u+"'?"))return; const res=await api("deleteUser",{username:u}); if(res.ok){toast("🗑 User deleted.");loadUsers();}else toast("❌ "+res.error); }
 
@@ -1257,7 +1321,7 @@ function renderLog(){
 function logDetailHTML(t){
   const row=(l,v)=>`<div class="iitem"><label>${esc(l)}</label><span>${v}</span></div>`, box=(label,html)=>`<div style="margin-top:12px;"><div style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px;">${esc(label)}</div>${html}</div>`;
   const ev=[]; const add=(l,ts,x)=>{ if(ts) ev.push({l:l,t:ts,x:x||""}); };
-  add("Ticket raised",t.timestamp,t.source+" submission"); add("Solution sent to the requester",t.solutionSentAt,t.resolvedBy?"by "+t.resolvedBy:""); add("Marked resolved",t.resolvedAt);
+  add("Ticket raised",t.timestamp,t.source+" submission"); if(t.assignedTo) add("Assigned to "+t.assignedTo,t.assignedAt,t.assignedBy?"by "+t.assignedBy:""); add("Solution sent to the requester",t.solutionSentAt,t.resolvedBy?"by "+t.resolvedBy:""); add("Marked resolved",t.resolvedAt);
   add("Feedback received",t.feedbackAt,Number(t.rating)>0?starsTxt(t.rating)+" "+t.rating+"/5":"");
   ev.sort((a,b)=>new Date(a.t)-new Date(b.t));
   const tsol=(t.timestamp&&(t.solutionSentAt||t.resolvedAt))?bizHours(new Date(t.timestamp),new Date(t.solutionSentAt||t.resolvedAt)):null;
@@ -1281,7 +1345,7 @@ function openLogTicket(id){
 }
 function csvCell(v){ let s=String(v==null?"":v).replace(/\r?\n/g," ⏎ "); if(/^[=+\-@\t]/.test(s)) s="'"+s; return '"'+s.replace(/"/g,'""')+'"'; }       // a leading = + - @ is neutralised so Excel never runs it as a formula
 function exportLogCsv(){
-  const cols=[["Ticket No","ticketId"],["Raised","timestamp"],["Source","source"],["Requester","name"],["Type","userType"],["Reg / Employee No","regEmpId"],["College / Dept","college"],["Official email","gmuEmail"],["Category","category"],["Sub-category","subcategory"],["Priority","priority"],["Status","status"],["Assigned to","assignedTo"],["Description","description"],["Solution sent","resolutionNotes"],["Solution sent at","solutionSentAt"],["Resolved by","resolvedBy"],["Resolved at","resolvedAt"],["Requester response","confirmation"],["Rating (1-5)","rating"],["Feedback reasons","feedbackTags"],["Feedback comment","feedback"],["Feedback at","feedbackAt"],["Kept in","_where"]];
+  const cols=[["Ticket No","ticketId"],["Raised","timestamp"],["Source","source"],["Requester","name"],["Type","userType"],["Reg / Employee No","regEmpId"],["College / Dept","college"],["Official email","gmuEmail"],["Category","category"],["Sub-category","subcategory"],["Priority","priority"],["Status","status"],["Assigned to","assignedTo"],["Assigned at","assignedAt"],["Assigned by","assignedBy"],["Description","description"],["Solution sent","resolutionNotes"],["Solution sent at","solutionSentAt"],["Resolved by","resolvedBy"],["Resolved at","resolvedAt"],["Requester response","confirmation"],["Rating (1-5)","rating"],["Feedback reasons","feedbackTags"],["Feedback comment","feedback"],["Feedback at","feedbackAt"],["Kept in","_where"]];
   const lines=[cols.map(c=>csvCell(c[0])).join(",")].concat(LOG.view.map(t=>cols.map(c=>csvCell(c[1]==="_where"?(t._src==="archive"?"Archive "+t._month:"Live"):t[c[1]])).join(",")));
   const csv="\ufeff"+lines.join("\r\n"); window._lastCsv=csv;
   try{ const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})); const a=document.createElement("a"); a.href=url; a.download="GMU_Ticket_Log_"+new Date().toISOString().slice(0,10)+".csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),3000); toast("⬇ "+LOG.view.length+" tickets exported."); }catch(e){ toast("The file could not be created in this browser."); }
