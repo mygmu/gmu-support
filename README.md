@@ -12,5 +12,6 @@ All protection (sign-in, roles, limits, validation) is applied by the Apps Scrip
 | `dashboard.html` | Staff console (sign-in required) |
 | `config.js` | **The one place to paste the Apps Script `/exec` address** — do not overwrite it when updating |
 | `404.html` | Friendly page for a wrong address |
+| `lib/` | Chart and PDF code, hosted here so nothing is ever loaded from another network (do not edit) |
 
 Never add `Code.gs` or any password to this repository.

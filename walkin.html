@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="referrer" content="no-referrer"/>
-<meta http-equiv="Content-Security-Policy" content="connect-src https://script.google.com https://*.googleusercontent.com; img-src 'self' data: blob: https://gmu.ac.ae; base-uri 'none'; form-action 'none'; object-src 'none'"/>
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'; connect-src https://script.google.com https://*.googleusercontent.com; img-src 'self' data: blob: https://gmu.ac.ae; frame-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"/>
 <script src="config.js"></script>
 <title>GMU Walk-in Support — Check In</title>
 <style>
@@ -67,7 +67,7 @@
     <div class="card-body">
       <div class="notice-err" id="rejectBanner" style="display:none;" role="alert"></div>
       <div id="form">
-        <div class="fg"><label>Full Name <span class="req">*</span></label><input type="text" id="name" placeholder="Your name"/><span class="err" id="e-name">Please enter your name.</span></div>
+        <div class="fg"><label>Full Name <span class="req">*</span></label><input type="text" id="name" placeholder="Your name"/><span class="err" id="e-name">Please enter the full name using letters only.</span></div>
         <div class="fg"><label>I am a <span class="req">*</span></label>
           <div class="type-grid">
             <div class="type-option"><input type="radio" name="ut" id="uS" value="Student"/><label for="uS">🎓 Student</label></div>
@@ -130,7 +130,7 @@ function domainOk(email,type){const m=/@([^@]+)$/.exec(String(email).toLowerCase
 function v(id){return document.getElementById(id).value.trim();}
 function valid(){
   let ok=true;
-  [["name","e-name",x=>x.length>1],["regEmpId","e-reg",x=>x.length>0],["category","e-cat",x=>x!==""],["desc","e-desc",x=>x.length>3]].forEach(([id,eid,fn])=>{
+  [["name","e-name",x=>{let v=x.trim();return /^[\p{L}\p{M}][\p{L}\p{M}'’.\- ]{1,79}$/u.test(v)&&!/(https?|www\.|\.com|\.net|\.org|\.ae|\.edu|\.gov|\.io|\.me|@)/i.test(v)&&!/\b(click|visit|verify|password|login|urgent|suspended|whatsapp|telegram)\b/i.test(v)&&v.split(/\s+/).length<=6;}],["regEmpId","e-reg",x=>x.length>0],["category","e-cat",x=>x!==""],["desc","e-desc",x=>x.length>3]].forEach(([id,eid,fn])=>{
     const el=document.getElementById(id),er=document.getElementById(eid);
     if(!fn(el.value.trim())){el.classList.add("input-error");er.style.display="block";ok=false;}else{el.classList.remove("input-error");er.style.display="none";}
   });

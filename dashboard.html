@@ -4,12 +4,11 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="referrer" content="no-referrer"/>
-<meta http-equiv="Content-Security-Policy" content="connect-src https://script.google.com https://*.googleusercontent.com; img-src 'self' data: blob: https://gmu.ac.ae; base-uri 'none'; form-action 'none'; object-src 'none'"/>
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'; connect-src https://script.google.com https://*.googleusercontent.com; img-src 'self' data: blob: https://gmu.ac.ae; frame-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"/>
 <script src="config.js"></script>
 <title>GMU Support — Operator Console</title>
 <link rel="preconnect" href="https://script.google.com"/>
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin/>
-<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com"/>
 <style>
 :root{
   --navy:#0e1b33;--navy2:#13294f;--panel:#0b1628;--blue:#2563eb;--blue2:#3b82f6;--teal:#0a7ea4;
@@ -230,6 +229,19 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
 .no-tickets,.loading{text-align:center;padding:30px;color:var(--muted);font-size:.85rem;}
 
 .sc-sub{font-size:.72rem;color:var(--muted);margin-top:4px;}
+.sat-grid{display:grid;grid-template-columns:210px 1fr 1fr;gap:24px;align-items:center;}
+.sat-num{font-size:3.2rem;font-weight:800;color:var(--navy);line-height:1;}.sat-stars{color:var(--gold);font-size:1.3rem;letter-spacing:2px;margin:4px 0;}
+.sat-sub{font-size:.8rem;color:var(--muted);line-height:1.5;}
+.b-asg{background:#e0f2fe;color:#075985;}
+.sla-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer;font-size:.84rem;}
+.sla-row:hover{background:#f3f8fd;}.sla-late{color:var(--red);font-weight:700;}.sla-ok{color:var(--green);font-weight:700;}
+.tline{border-left:3px solid var(--border);margin:6px 0 4px 8px;padding-left:16px;}.tline-i{position:relative;margin-bottom:11px;font-size:.84rem;}
+.tline-i:before{content:"";position:absolute;left:-23px;top:4px;width:11px;height:11px;border-radius:50%;background:var(--gold);border:2px solid #fff;box-shadow:0 0 0 1px var(--gold);}
+.tline-i b{color:var(--navy);}.tline-i span{color:var(--muted);}
+.log-sort{cursor:pointer;user-select:none;white-space:nowrap;}.log-sort:hover{color:var(--teal);}
+.clip{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sla-bar{display:inline-block;width:90px;height:9px;background:var(--bg);border-radius:50px;overflow:hidden;vertical-align:middle;margin-right:6px;}.sla-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));}
+@media (max-width:900px){.sat-grid{grid-template-columns:1fr;}}
 .fb-box{border-radius:8px;padding:10px 14px;font-size:.84rem;border:1px solid;line-height:1.5;}
 .fb-good{background:#effaf3;border-color:#b7e4c7;}.fb-low{background:#fff3f3;border-color:#f3c2c2;}.fb-none{background:#f6f9fd;border-color:var(--border);color:var(--muted);}
 .fb-stars{color:var(--gold);letter-spacing:1px;font-size:1rem;}.fb-n{font-weight:800;}.fb-when{color:var(--muted);font-size:.78rem;}
@@ -291,6 +303,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
     <div class="nav-item active" data-nav="dashboard" data-perm="view" onclick="nav('dashboard')"><span class="ic">📊</span> Dashboard</div>
     <div class="sb-section">IT Operations</div>
     <div class="nav-item" data-nav="queue" data-perm="view" onclick="nav('queue')"><span class="ic">🎫</span> Ticket Queue</div>
+    <div class="nav-item" data-nav="log" data-perm="view" onclick="nav('log')"><span class="ic">📒</span> Ticket Log</div>
     <div class="nav-item" data-nav="walkin" data-perm="view" onclick="nav('walkin')"><span class="ic">🚶</span> Walk-in Desk <span class="nb" id="navWalk">0</span></div>
     <div class="sb-section">Analytics</div>
     <div class="nav-item" data-nav="reports" data-perm="report" onclick="nav('reports')"><span class="ic">📈</span> Reports</div>
@@ -305,9 +318,15 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
   <div class="main">
 
     <!-- DASHBOARD -->
+    <div id="pauseBar" style="display:none;background:#b91c1c;color:#fff;padding:10px 16px;border-radius:10px;margin-bottom:14px;font-weight:700;font-size:.88rem;" role="alert">⏸ The public ticket forms are PAUSED — visitors are being asked to e-mail support. Open Settings → Emergency controls to resume.</div>
     <div class="page active" id="page-dashboard">
       <div class="page-head"><div><h2>Dashboard</h2><div class="crumb">Overview of your support operations</div></div></div>
       <div class="stat-cards" id="statCards"></div>
+      <div class="pcard" style="margin-bottom:16px;"><div class="pc-head"><h3>⭐ Overall Satisfaction</h3><span class="pill" id="satPill"></span></div><div class="pc-body"><div class="sat-grid">
+        <div><div class="sat-num" id="satNum">—</div><div class="sat-stars" id="satStars"></div><div class="sat-sub" id="satSub"></div></div>
+        <div id="satDist"></div>
+        <div><div class="sat-sub" style="font-weight:700;margin-bottom:4px;">Monthly average (last 6 months)</div><div class="chart-wrap" style="height:150px;"><canvas id="satTrend"></canvas></div></div>
+      </div></div></div>
       <div class="grid2">
         <div class="pcard"><div class="pc-head"><h3>Tickets by Status</h3><span class="pill">All time</span></div><div class="pc-body" style="display:grid;grid-template-columns:1fr 150px;gap:16px;align-items:center;"><div class="chart-wrap" style="height:220px;"><canvas id="dChStatus"></canvas></div><div class="legend" id="dLegStatus"></div></div></div>
         <div class="pcard"><div class="pc-head"><h3>Priority Distribution</h3><span class="pill">All time</span></div><div class="pc-body" style="display:grid;grid-template-columns:1fr 150px;gap:16px;align-items:center;"><div class="chart-wrap" style="height:220px;"><canvas id="dChPriority"></canvas></div><div class="legend" id="dLegPriority"></div></div></div>
@@ -315,6 +334,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
       <div class="grid2">
         <div class="pcard"><div class="pc-head"><h3>Top Issue Categories</h3><span class="pill">This period</span></div><div class="pc-body"><div class="toplist" id="dTopCat"></div></div></div>
         <div class="pcard"><div class="pc-head"><h3>Recent Tickets</h3><span class="pill" id="dRecentMore">latest</span></div><div class="pc-body"><div class="feed" id="dRecent"></div></div></div>
+      </div>
+      <div class="grid2">
+        <div class="pcard"><div class="pc-head"><h3>👥 Team Workload</h3><span class="pill">Live tickets</span></div><div class="pc-body" style="padding:0;overflow-x:auto;"><table class="utable" id="workTable"><thead><tr><th>Person</th><th>Open</th><th>In progress</th><th>Awaiting reply</th><th>Overdue</th></tr></thead><tbody></tbody></table></div></div>
+        <div class="pcard"><div class="pc-head"><h3>⏱ SLA Watch</h3><span class="pill" id="slaPill"></span></div><div class="pc-body"><div id="slaList"></div></div></div>
       </div>
     </div>
 
@@ -335,6 +358,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
             </div>
             <div class="q-frow">
               <select id="fFeedback" onchange="applyFilters()"><option value="All">Any feedback</option><option value="has">Has feedback</option><option value="low">Low rating (1–2 ★)</option><option value="wait">Waiting for feedback</option></select>
+              <select id="fAssignee" onchange="applyFilters()"><option value="All">Any assignee</option></select>
             </div>
           </div>
           <div class="ticket-list" id="ticketList"><div class="loading">Loading…</div></div>
@@ -344,6 +368,27 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
     </div>
 
     <!-- WALK-IN -->
+    <div class="page" id="page-log">
+      <div class="page-head"><div><h2>Ticket Log</h2><div class="crumb">Every ticket — what was raised, the solution sent and the feedback received</div></div><button class="btn btn-gold" onclick="exportLogCsv()">⬇ Export to Excel (CSV)</button></div>
+      <div class="rep-controls">
+        <div class="fg"><label>Period</label><select id="logPeriod" onchange="loadLog()"><option value="live">Live tickets</option></select></div>
+        <div class="fg"><label>Status</label><select id="logStatus" onchange="filterLog()"><option value="All">All statuses</option><option>Open</option><option>In Progress</option><option>Awaiting Confirmation</option><option>Resolved</option><option>Closed</option></select></div>
+        <div class="fg"><label>Category</label><select id="logCat" onchange="filterLog()"></select></div>
+        <div class="fg"><label>Assigned to</label><select id="logAsg" onchange="filterLog()"></select></div>
+        <div class="fg"><label>Feedback</label><select id="logFb" onchange="filterLog()"><option value="All">Any feedback</option><option value="has">Has feedback</option><option value="low">Low rating (1–2 ★)</option><option value="wait">Waiting for feedback</option></select></div>
+        <div class="fg"><label>Search</label><input type="text" id="logSearch" placeholder="Ticket no., name, issue, solution, feedback…" oninput="debouncedLog()" style="min-width:230px;"/></div>
+      </div>
+      <div class="rep-summary" id="logSummary"></div>
+      <div class="pcard"><div class="pc-body" style="padding:0;overflow-x:auto;">
+        <table class="utable" id="logTable"><thead><tr>
+          <th class="log-sort" onclick="sortLog('ticketId')">Ticket No</th><th class="log-sort" onclick="sortLog('timestamp')">Raised</th><th class="log-sort" onclick="sortLog('name')">Requester</th><th class="log-sort" onclick="sortLog('category')">Category</th>
+          <th class="log-sort" onclick="sortLog('priority')">Priority</th><th class="log-sort" onclick="sortLog('status')">Status</th><th class="log-sort" onclick="sortLog('assignedTo')">Assigned to</th>
+          <th>Solution sent</th><th class="log-sort" onclick="sortLog('rating')">Rating</th><th>Feedback</th></tr></thead>
+          <tbody><tr><td colspan="10" class="no-tickets">Loading…</td></tr></tbody></table>
+        <div id="logMore"></div>
+      </div></div>
+    </div>
+
     <div class="page" id="page-walkin">
       <div class="page-head"><div><h2>Walk-in Desk</h2><div class="crumb">Attend visitors in order of arrival</div></div></div>
       <div class="now-serving" id="nowServing"></div>
@@ -380,6 +425,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
       <div class="rep-summary" id="repSummary"></div>
       <div class="pcard" style="margin-bottom:16px;"><div class="pc-head"><h3>Tickets per month</h3><span class="pill" id="repPeriod"></span></div><div class="pc-body"><div class="chart-wrap chart-wide"><canvas id="rChTrend"></canvas></div></div></div>
       <div class="pcard" style="margin-bottom:16px;"><div class="pc-head"><h3>💬 Customer feedback</h3><span class="pill" id="fbPill"></span></div><div class="pc-body"><div class="fb-report"><div id="fbDist"></div><div id="fbSide"></div></div></div></div>
+      <div class="grid2">
+        <div class="pcard"><div class="pc-head"><h3>⏱ SLA performance</h3><span class="pill">Answered within target · weekends not counted</span></div><div class="pc-body"><table class="rtable" id="slaTable"><thead><tr><th>Priority</th><th>Target</th><th>Tickets</th><th>Within target</th></tr></thead><tbody></tbody></table></div></div>
+        <div class="pcard"><div class="pc-head"><h3>📂 By category — speed &amp; satisfaction</h3></div><div class="pc-body"><table class="rtable" id="catTable"><thead><tr><th>Category</th><th>Tickets</th><th>Avg resolution</th><th>Avg rating</th></tr></thead><tbody></tbody></table></div></div>
+      </div>
+      <div class="grid2">
+        <div class="pcard"><div class="pc-head"><h3>📅 Busiest days</h3></div><div class="pc-body"><div class="chart-wrap"><canvas id="rChDow"></canvas></div></div></div>
+        <div class="pcard"><div class="pc-head"><h3>🕒 Busiest hours</h3></div><div class="pc-body"><div class="chart-wrap"><canvas id="rChHour"></canvas></div></div></div>
+      </div>
       <div class="grid2">
         <div class="pcard"><div class="pc-head"><h3>By Category</h3></div><div class="pc-body"><div class="chart-wrap"><canvas id="rChCat"></canvas></div></div></div>
         <div class="pcard"><div class="pc-head"><h3>By College</h3></div><div class="pc-body"><div class="chart-wrap"><canvas id="rChCol"></canvas></div></div></div>
@@ -419,20 +472,29 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
     <!-- USERS -->
     <div class="page" id="page-users">
       <div class="page-head"><div><h2>User Management</h2><div class="crumb">Provision operators and assign roles</div></div><button class="btn btn-primary" onclick="openUserModal()">+ Add User</button></div>
-      <div class="pcard"><div class="pc-body" style="padding:0;overflow-x:auto;"><table class="utable" id="usersTable"><thead><tr><th>Name</th><th>Username</th><th>Roles</th><th>Status</th><th>Actions</th></tr></thead><tbody><tr><td colspan="5" class="loading">Loading…</td></tr></tbody></table></div></div>
+      <div class="pcard"><div class="pc-body" style="padding:0;overflow-x:auto;"><table class="utable" id="usersTable"><thead><tr><th>Name</th><th>Username</th><th>E-mail</th><th>Roles</th><th>Status</th><th>Actions</th></tr></thead><tbody><tr><td colspan="6" class="loading">Loading…</td></tr></tbody></table></div></div>
     </div>
 
     <!-- SETTINGS -->
     <div class="page" id="page-settings">
       <div class="page-head"><div><h2>Settings</h2><div class="crumb">System configuration</div></div></div>
+      <div class="pcard" style="max-width:680px;margin-bottom:16px;border:2px solid #fecaca;"><div class="pc-head"><h3>🛡 Emergency controls</h3><span class="pill" id="pauseState"></span></div><div class="dcard-b">
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.55;margin-bottom:10px;">If the public forms are being misused (a flood of fake tickets, strange uploads), pause them. Visitors are told to e-mail support instead; requesters can still confirm and rate; staff are not affected. You will also receive a security e-mail.</p>
+        <button class="btn btn-danger" id="pauseBtn" onclick="togglePause()">⏸ Pause public forms</button>
+      </div></div>
       <div class="pcard" style="max-width:680px;"><div class="dcard-b" style="display:flex;flex-direction:column;gap:14px;">
         <label class="toggle"><input type="checkbox" id="setActionBtn" checked/> Show the “Open the Support Dashboard” button in e-mails to the support team</label>
-        <div class="fg"><label>Dashboard page address (for the e-mail "Open the Support Dashboard" button)</label><input type="text" id="setDashUrl" placeholder="https://YOUR-NAME.github.io/gmu-support/dashboard.html" oninput="updateTestLinks()"/><a id="testDash" class="test-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">Test this link ↗</a></div>
-        <div class="fg"><label>Confirmation &amp; feedback page address (for the e-mail "Resolved / Still have an issue" buttons)</label><input type="text" id="setFbUrl" placeholder="https://YOUR-NAME.github.io/gmu-support/confirm.html" oninput="updateTestLinks()"/><a id="testConf" class="test-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">Test this link ↗</a><div id="confWarn" style="display:none;font-size:.78rem;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px;margin-top:6px;line-height:1.5;">⚠ Google Sites cannot pass the ticket number to a page, so the e-mail buttons would make people type their Ticket ID and e-mail. For one-click buttons use the GitHub Pages address of <b>confirm.html</b> (see GITHUB_PAGES_GUIDE.md).</div></div>
+        <div class="fg"><label>Dashboard page address (for the e-mail "Open the Support Dashboard" button)</label><input type="text" id="setDashUrl" placeholder="https://YOUR-NAME.github.io/gmu-support/dashboard.html" oninput="updateTestLinks()"/><a id="testDash" class="test-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">Test this link ↗</a><div id="dashUse" style="font-size:.76rem;color:var(--muted);margin-top:6px;"></div></div>
+        <div class="fg"><label>Confirmation &amp; feedback page address (for the e-mail "Resolved / Still have an issue" buttons)</label><input type="text" id="setFbUrl" placeholder="https://YOUR-NAME.github.io/gmu-support/confirm.html" oninput="updateTestLinks()"/><a id="testConf" class="test-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">Test this link ↗</a><div id="confWarn" style="display:none;font-size:.78rem;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px;margin-top:6px;line-height:1.5;">⚠ Google Sites cannot pass the ticket number to a page, so it is <b>not used</b> for the e-mail buttons — they open the built-in site address instead (shown below).</div><div id="confUse" style="font-size:.76rem;color:var(--muted);margin-top:6px;"></div></div>
         <div class="fg"><label>Admin / Support Email</label><input type="email" id="setAdminEmail" value="support@mygmu.ac.ae"/></div>
         <div class="fg"><label>Team Members (Resolved By options)</label><div id="collList"></div>
           <div style="display:flex;gap:8px;margin-top:6px;"><input type="text" id="newColl" placeholder="Add colleague name…" style="flex:1;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:.85rem;"/><button class="btn btn-primary" onclick="addColleague()">+ Add</button></div></div>
         <div><button class="btn btn-success" onclick="saveSettings()">💾 Save Settings</button></div>
+        <div class="pcard" style="margin:6px 0;"><div class="pc-head"><h3>📌 Automatic assignment by category</h3></div><div class="dcard-b">
+          <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">New tickets in a category are assigned to the person you choose. They are e-mailed (if an e-mail is saved for them under <b>Users</b>) and the ticket shows their name. Anyone can still re-assign a ticket later. Only active users who can work on tickets are listed.</p>
+          <div id="routingList"></div>
+          <div style="margin-top:12px;"><button class="btn btn-success" id="routeSaveBtn" onclick="saveRouting()">💾 Save assignment rules</button></div>
+        </div></div>
         <div class="danger-zone" id="dangerZone">
           <h4>⚠ Reset Ticket Log (password protected)</h4>
           <p style="font-size:.78rem;color:var(--muted);margin-bottom:9px;">Permanently clears all ticket records. Requires the reset password.</p>
@@ -475,6 +537,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
   <div class="modal-b">
     <div class="fg"><label>Full Name *</label><input type="text" id="ufName"/></div>
     <div class="fg"><label>Username *</label><input type="text" id="ufUser"/></div>
+    <div class="fg"><label>E-mail <span style="font-weight:400;color:var(--muted)">(optional — used to tell this person when a ticket is assigned to them)</span></label><input type="email" id="ufEmail" placeholder="name@gmu.ac.ae"/></div>
     <div class="fg"><label id="ufPassLabel">Password *</label><input type="password" id="ufPass" placeholder="Set a password"/></div>
     <div class="fg"><label>Roles (assign one or more) *</label><div class="role-checks" id="roleChecks"></div></div>
     <div class="fg"><label>Status</label><select id="ufStatus"><option>Active</option><option>Disabled</option></select></div>
@@ -492,6 +555,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
     <div id="pwdErr" style="color:var(--red);font-size:.82rem;display:none;"></div>
   </div>
   <div class="modal-f"><button class="btn btn-outline" id="pwdCancel" onclick="closeModal('pwdModal')">Cancel</button><button class="btn btn-success" id="pwdSave" onclick="submitPassword()">Save new password</button></div></div></div>
+
+<!-- TICKET LOG DETAIL -->
+<div class="overlay" id="logModal"><div class="modal" style="width:760px;max-width:96vw;"><div class="modal-h"><h3 id="logModalTitle">Ticket</h3><button class="modal-x" onclick="closeModal('logModal')">×</button></div>
+  <div class="modal-b" id="logDetail"></div>
+  <div class="modal-f" id="logModalFoot"><button class="btn btn-outline" onclick="closeModal('logModal')">Close</button></div></div></div>
 
 <!-- ARCHIVED TICKET (read-only) -->
 <div class="overlay" id="archiveModal"><div class="modal" style="width:640px;"><div class="modal-h"><h3 id="archiveTitle">Archived ticket</h3><button class="modal-x" onclick="closeModal('archiveModal')">×</button></div>
@@ -513,7 +581,7 @@ let colleagues = ["Salsabeel Kadavath Purayil"];
 let allTickets=[], activeTicket=null, walkActive=null, lastCount=0, repTickets=[], walkRating=0, charts={}, editingUser=null, ALL_ROLES=["Super Admin","Ticket Agent","Walk-in Desk","Reports","User Admin"];
 
 // ── LIBRARIES (loaded only when needed, so the sign-in page appears instantly) ──
-const LIBS={chart:"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js",pdf:"https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",table:"https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"};
+const LIBS={chart:"lib/chart.umd.js",pdf:"lib/jspdf.umd.min.js",table:"lib/jspdf.plugin.autotable.min.js"};   // hosted with this site — no code is ever loaded from another network
 const _lib={};
 function loadScript(u){ if(_lib[u]) return _lib[u]; return _lib[u]=new Promise((res,rej)=>{ const e=document.createElement("script"); e.src=u; e.async=true; e.onload=res; e.onerror=()=>{ delete _lib[u]; rej(new Error("load failed")); }; document.head.appendChild(e); }); }
 function ensureChart(){ return window.Chart?Promise.resolve():loadScript(LIBS.chart); }
@@ -574,7 +642,7 @@ function openHashTicket(){
 function hasRole(r){ return ME && (ME.roles.indexOf("Super Admin")>-1 || ME.roles.indexOf(r)>-1); }
 /* Mirrors the permissions enforced by the server. These only decide what is SHOWN; the server refuses anything not allowed. */
 const PERMS={view:["Ticket Agent","Walk-in Desk"],report:["Reports","Ticket Agent","Walk-in Desk"],email:["Ticket Agent"],users:["User Admin"],settings:["User Admin"]};
-const NAV_PERM={dashboard:"view",queue:"view",walkin:"view",reports:"report",archive:"view",users:"users",settings:"settings"};
+const NAV_PERM={dashboard:"view",queue:"view",log:"view",walkin:"view",reports:"report",archive:"view",users:"users",settings:"settings"};
 function hasPerm(p){ return !!ME && (ME.roles.indexOf("Super Admin")>-1 || (PERMS[p]||[]).some(r=>ME.roles.indexOf(r)>-1)); }
 function applyRoleVisibility(){
   document.querySelectorAll("[data-perm]").forEach(el=>{ el.style.display = hasPerm(el.dataset.perm)?"":"none"; });
@@ -625,6 +693,7 @@ function nav(name){
   document.getElementById("sidebar").classList.remove("open");
   if(name==="dashboard") renderDashboard();
   if(name==="walkin") renderWalkin();
+  if(name==="log") loadLog();
   if(name==="reports") loadReports();
   if(name==="archive") loadArchivePage();
   if(name==="users") loadUsers();
@@ -634,11 +703,18 @@ function nav(name){
 
 // ── LOAD ──────────────────────────────────────────────────────
 function gv(id){ const e=document.getElementById(id); return e?e.value.trim():""; }
-let VER="", viewTickets=[], visibleCount=60, STATS=null;
+let VER="", viewTickets=[], visibleCount=60, STATS=null, assignees=[];
+const CATS=["Moodle LMS","Microsoft 365","Google Workspace","Official / Institutional Email","Assessment Portal (ExamSoft)","Zoom / Video Conferencing","Laptop / Device Issue","Wi-Fi / Network","Classroom / AV Support","Printer / Peripheral","Other / General Request"];
+/* People a ticket can be given to: the users who can work on tickets (plus any older "team member" names). */
+function assigneeNames(){ const out=[]; assignees.concat(colleagues).forEach(n=>{ if(n&&out.indexOf(n)<0) out.push(n); }); return out; }
+function assigneeOptions(selected){ const names=assigneeNames(); if(selected&&names.indexOf(selected)<0) names.push(selected); return names.map(n=>`<option ${n===selected?"selected":""}>${esc(n)}</option>`).join(""); }
+function buildAssigneeFilter(){ const f=document.getElementById("fAssignee"); if(!f) return; const cur=f.value||"All";
+  f.innerHTML='<option value="All">Any assignee</option><option value="__me__">👤 My tickets</option><option value="__none__">Unassigned</option>'+assigneeNames().map(n=>`<option>${esc(n)}</option>`).join(""); f.value=[...f.options].some(o=>o.value===cur)?cur:"All"; }
+function asgMatch(t,f){ if(f==="All") return true; const a=String(t.assignedTo||"").toLowerCase(); if(f==="__none__") return !a; if(f==="__me__") return !!ME&&a===String(ME.name||"").toLowerCase(); return a===f.toLowerCase(); }
 function isActive(p){ const e=document.getElementById("page-"+p); return !!e&&e.classList.contains("active"); }
 function isSuperUser(){ return !!ME&&ME.roles.indexOf("Super Admin")>-1; }
 function debounce(fn,ms){ let t; return function(){ clearTimeout(t); t=setTimeout(fn,ms); }; }
-function applySettings(s){ window._settings=s; if(s&&s.colleagues){ try{ const c=JSON.parse(s.colleagues); if(Array.isArray(c)&&c.length) colleagues=c; }catch(e){} } }
+function applySettings(s){ window._settings=s; setTimeout(updatePauseUI,0); if(s&&s.colleagues){ try{ const c=JSON.parse(s.colleagues); if(Array.isArray(c)&&c.length) colleagues=c; }catch(e){} } }
 function updateWalkBadge(){ const nw=document.getElementById("navWalk"), wc=STATS?STATS.walkinOpen:0; if(wc>0){nw.style.display="inline-block";nw.textContent=wc;}else nw.style.display="none"; }
 
 /* One request brings the tickets, the statistics and the settings together (one sheet read on the server). */
@@ -646,7 +722,7 @@ async function refresh(){
   if(!hasPerm("view")) return;
   try{
     const res=await api("getDashboard"); if(!res.ok) return;
-    VER=res.v; allTickets=res.tickets; STATS=res.stats;
+    VER=res.v; allTickets=res.tickets; STATS=res.stats; assignees=res.assignees||assignees; buildAssigneeFilter();
     if(res.settings) applySettings(res.settings);
     renderStatCards(STATS); updateWalkBadge(); applyFilters(); checkNew(allTickets.length);
     if(isActive("dashboard")) renderDashboard();
@@ -658,8 +734,8 @@ async function loadTickets(){ await refresh(); }
 
 /* Searching and filtering happen instantly in the browser — no waiting for the server. */
 function applyFilters(){
-  const q=gv("fSearch").toLowerCase(), st=gv("fStatus")||"All", pr=gv("fPriority")||"All", cat=gv("fCategory")||"All", src=gv("fSource")||"All", fb=gv("fFeedback")||"All";
-  viewTickets=allTickets.filter(t=>(st==="All"||t.status===st)&&(pr==="All"||t.priority===pr)&&(cat==="All"||t.category===cat)&&(src==="All"||t.source===src)&&fbMatch(t,fb)&&(!q||(t.name+" "+t.ticketId+" "+t.description+" "+t.gmuEmail+" "+t.regEmpId).toLowerCase().indexOf(q)>-1));
+  const q=gv("fSearch").toLowerCase(), st=gv("fStatus")||"All", pr=gv("fPriority")||"All", cat=gv("fCategory")||"All", src=gv("fSource")||"All", fb=gv("fFeedback")||"All", asg=gv("fAssignee")||"All";
+  viewTickets=allTickets.filter(t=>(st==="All"||t.status===st)&&(pr==="All"||t.priority===pr)&&(cat==="All"||t.category===cat)&&(src==="All"||t.source===src)&&fbMatch(t,fb)&&asgMatch(t,asg)&&(!q||(t.name+" "+t.ticketId+" "+t.description+" "+t.gmuEmail+" "+t.regEmpId).toLowerCase().indexOf(q)>-1));
   visibleCount=60; renderTicketList(viewTickets);
 }
 const debouncedFilter=debounce(applyFilters,160);
@@ -692,7 +768,7 @@ function renderTicketList(tickets){
   l.innerHTML=shown.map(t=>`<div class="tcard p${pcap(t.priority)} ${activeTicket?.ticketId===t.ticketId?'active':''}" data-id="${esc(t.ticketId)}" onclick="openTicket(this.dataset.id)">
     <div class="tc-top"><span class="tc-id">${esc(t.ticketId)}</span><span class="tc-time">${ago(t.timestamp)}</span></div>
     <div class="tc-name">${esc(t.name)}</div><div class="tc-cat">🔧 ${esc(t.category)} — ${esc(t.subcategory)}</div>
-    <div class="tc-foot"><span class="badge b-${skey(t.status)}">${esc(t.status)}</span><span class="badge b-${pcap(t.priority).toLowerCase()}">${esc(pcap(t.priority))}</span><span class="badge b-${t.source==='Walk-in'?'walk':'online'}">${esc(t.source)}</span>${/Reopened/i.test(t.confirmation)?'<span class="badge b-reopen">↻ Reopened</span>':''}${Number(t.rating)>0?`<span class="badge b-star${Number(t.rating)<=2?" low":""}">★ ${Number(t.rating)}</span>`:''}${t.escalatedTo?'<span class="badge b-esc">↗ Esc</span>':''}</div>
+    <div class="tc-foot"><span class="badge b-${skey(t.status)}">${esc(t.status)}</span><span class="badge b-${pcap(t.priority).toLowerCase()}">${esc(pcap(t.priority))}</span><span class="badge b-${t.source==='Walk-in'?'walk':'online'}">${esc(t.source)}</span>${/Reopened/i.test(t.confirmation)?'<span class="badge b-reopen">↻ Reopened</span>':''}${t.assignedTo?`<span class="badge b-asg">👤 ${esc(t.assignedTo)}</span>`:''}${Number(t.rating)>0?`<span class="badge b-star${Number(t.rating)<=2?" low":""}">★ ${Number(t.rating)}</span>`:''}${t.escalatedTo?'<span class="badge b-esc">↗ Esc</span>':''}</div>
   </div>`).join("")+(tickets.length>shown.length?`<button class="btn btn-outline" style="width:100%;margin:6px 0 2px;" onclick="showMoreTickets()">Show more (${tickets.length-shown.length} remaining)</button>`:"");
 }
 function starsTxt(n){ n=Math.max(0,Math.min(5,Number(n)||0)); return "★".repeat(n)+"☆".repeat(5-n); }
@@ -709,6 +785,7 @@ function showMoreTickets(){ visibleCount+=60; renderTicketList(viewTickets); }
 
 // ── DASHBOARD ─────────────────────────────────────────────────
 function renderDashboard(){
+  renderSatisfaction(); renderWorkload(); renderSla();
   if(!allTickets.length){ return; }
   const byStatus=countBy(allTickets,"status"), byPriority=countBy(allTickets,"priority"), byCat=countBy(allTickets,"category");
   donut("dChStatus",byStatus,"dLegStatus");
@@ -732,7 +809,7 @@ function donut(id,d,legendId){
 function openTicket(id){ activeTicket=allTickets.find(t=>t.ticketId===id); if(!activeTicket)return; renderTicketList(viewTickets); document.getElementById("detailPanel").innerHTML=detailHTML(activeTicket); document.getElementById("detailPanel").scrollIntoView({behavior:"smooth",block:"start"}); }
 
 function detailHTML(t){ return `
-  <div class="dcard"><div class="titlebar"><div><h2>${esc(t.ticketId)} — ${esc(t.category)}</h2><div class="sub">Submitted: ${dt(t.timestamp)} · Source: ${esc(t.source)}</div></div><div class="badges"><span class="badge b-${skey(t.status)}">${esc(t.status)}</span><span class="badge b-${pcap(t.priority).toLowerCase()}">${esc(pcap(t.priority))}</span>${/Reopened/i.test(t.confirmation)?'<span class="badge b-reopen">↻ Reopened</span>':''}</div></div></div>
+  <div class="dcard"><div class="titlebar"><div><h2>${esc(t.ticketId)} — ${esc(t.category)}</h2><div class="sub">Submitted: ${dt(t.timestamp)} · Source: ${esc(t.source)}${t.assignedTo?` · Assigned to: <strong>${esc(t.assignedTo)}</strong>`:""}</div></div><div class="badges"><span class="badge b-${skey(t.status)}">${esc(t.status)}</span><span class="badge b-${pcap(t.priority).toLowerCase()}">${esc(pcap(t.priority))}</span>${/Reopened/i.test(t.confirmation)?'<span class="badge b-reopen">↻ Reopened</span>':''}</div></div></div>
   <div class="dcard"><div class="dcard-h">👤 Submitter</div><div class="dcard-b"><div class="igrid">
     <div class="iitem"><label>Name</label><span>${esc(t.name)}</span></div><div class="iitem"><label>Type</label><span>${esc(t.userType)}</span></div>
     <div class="iitem"><label>${t.userType==='Student'?'Registration No':'Employee ID'}</label><span>${esc(t.regEmpId)||'—'}</span></div><div class="iitem"><label>College/Dept</label><span>${esc(t.college)}</span></div>
@@ -752,6 +829,7 @@ function detailHTML(t){ return `
     <div class="igrid">
       <div class="fg"><label>Status</label><select id="aStatus"><option ${t.status==="Open"?"selected":""}>Open</option><option ${t.status==="In Progress"?"selected":""}>In Progress</option><option ${t.status==="Awaiting Confirmation"?"selected":""}>Awaiting Confirmation</option><option ${t.status==="Resolved"?"selected":""}>Resolved</option><option ${t.status==="Closed"?"selected":""}>Closed</option></select></div>
       <div class="fg"><label>Resolved By</label><select id="aResolvedBy"><option value="">— Select —</option>${colleagues.map(c=>`<option ${t.resolvedBy===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div>
+      <div class="fg"><label>Assigned To</label><select id="aAssigned"><option value="">— Unassigned —</option>${assigneeOptions(t.assignedTo)}</select></div>
     </div>
     <div class="fg"><label>Solution / Resolution Notes</label><textarea id="aNotes" rows="3" placeholder="Write the solution or instructions for the requester…">${esc(t.resolutionNotes)}</textarea></div>
     ${hasPerm("email")?`<div class="arow">
@@ -769,8 +847,10 @@ function renderAtt(att){ return String(att||"").split("\n").filter(Boolean).map(
 
 async function saveAction(){
   if(!activeTicket)return;
-  const res=await api("updateTicket",{ticketId:activeTicket.ticketId,status:gv("aStatus"),resolvedBy:gv("aResolvedBy"),resolutionNotes:document.getElementById("aNotes").value.trim()});
-  if(res.ok){ toast("✅ Status saved."); await loadAll(); const u=allTickets.find(x=>x.ticketId===activeTicket.ticketId); if(u){activeTicket=u;openTicket(u.ticketId);} } else toast("❌ "+res.error);
+  const payload={ticketId:activeTicket.ticketId,status:gv("aStatus"),resolvedBy:gv("aResolvedBy"),resolutionNotes:document.getElementById("aNotes").value.trim()};
+  const asg=gv("aAssigned"); if(asg!==(activeTicket.assignedTo||"")) payload.assignedTo=asg||"__none__";        // only when the person changed it
+  const res=await api("updateTicket",payload);
+  if(res.ok){ toast(payload.assignedTo&&payload.assignedTo!=="__none__"?"✅ Saved — assigned to "+payload.assignedTo+".":"✅ Status saved."); await loadAll(); const u=allTickets.find(x=>x.ticketId===activeTicket.ticketId); if(u){activeTicket=u;openTicket(u.ticketId);} } else toast("❌ "+res.error);
 }
 
 /* ── read file inputs → base64 (for admin email attachments) ── */
@@ -880,12 +960,15 @@ function repPreset(p,silent){
   document.getElementById("repFrom").value=from; document.getElementById("repTo").value=cur;
   if(!silent) buildReports();
 }
-function newB(){ return {n:0,st:{},pr:{},cat:{},col:{},iss:{},res:{},rt:[0,0],rg:[0,0],sd:[0,0,0,0,0],tg:{}}; }
+function newB(){ return {n:0,st:{},pr:{},cat:{},col:{},iss:{},res:{},rt:[0,0],rg:[0,0],sd:[0,0,0,0,0],tg:{},dw:[0,0,0,0,0,0,0],hr:new Array(24).fill(0),fr:[0,0],sl:{},ct:{},cr:{}}; }
 function addTo(o,k,v){ o[k]=(o[k]||0)+v; }
 function mergeB(a,b){ if(!b) return a; a.n+=b.n||0; ["st","pr","cat","col","iss"].forEach(k=>Object.keys(b[k]||{}).forEach(x=>addTo(a[k],x,b[k][x])));
   Object.keys(b.res||{}).forEach(x=>{ const y=a.res[x]||(a.res[x]=[0,0,0]); y[0]+=b.res[x][0]; y[1]+=b.res[x][1]; y[2]+=b.res[x][2]; });
   a.rt[0]+=(b.rt||[0,0])[0]; a.rt[1]+=(b.rt||[0,0])[1]; a.rg[0]+=(b.rg||[0,0])[0]; a.rg[1]+=(b.rg||[0,0])[1];
-  const sd=b.sd||[0,0,0,0,0]; for(let i=0;i<5;i++) a.sd[i]+=sd[i]||0; Object.keys(b.tg||{}).forEach(x=>addTo(a.tg,x,b.tg[x])); return a; }
+  const sd=b.sd||[0,0,0,0,0]; for(let i=0;i<5;i++) a.sd[i]+=sd[i]||0; Object.keys(b.tg||{}).forEach(x=>addTo(a.tg,x,b.tg[x]));
+  (b.dw||[]).forEach((v,i)=>{ a.dw[i]+=v||0; }); (b.hr||[]).forEach((v,i)=>{ a.hr[i]+=v||0; }); a.fr[0]+=(b.fr||[0,0])[0]; a.fr[1]+=(b.fr||[0,0])[1];
+  Object.keys(b.sl||{}).forEach(x=>{ const y=a.sl[x]||(a.sl[x]=[0,0]); y[0]+=b.sl[x][0]; y[1]+=b.sl[x][1]; });
+  ["ct","cr"].forEach(k=>Object.keys(b[k]||{}).forEach(x=>{ const y=a[k][x]||(a[k][x]=[0,0]); y[0]+=b[k][x][0]; y[1]+=b[k][x][1]; })); return a; }
 function buildReports(){
   if(!REP) return;
   const f=gv("repFrom")||"0000-00", t=gv("repTo")||"9999-99", src=gv("repSource")||"All";
@@ -898,13 +981,24 @@ function buildReports(){
     <div class="rsum"><div class="n">${resolved}</div><div class="l">Resolved</div></div>
     <div class="rsum"><div class="n">${open}</div><div class="l">Open</div></div>
     <div class="rsum"><div class="n">${avgRes}</div><div class="l">Avg Resolution</div></div>
+    <div class="rsum"><div class="n">${b.fr[1]?fmtH(b.fr[0]/b.fr[1]):"—"}</div><div class="l">Avg Time to Solution</div></div>
     <div class="rsum"><div class="n">${avgRating}</div><div class="l">Avg Satisfaction</div></div>`;
   document.getElementById("repPeriod").textContent=ms.length?(mname(ms[0].m)+(ms.length>1?" – "+mname(ms[ms.length-1].m):"")):"No data";
   repBar("rChTrend",{labels:ms.map(m=>mname(m.m)),values:ms.map(m=>(src!=="Walk-in"?m["Online"].n:0)+(src!=="Online"?m["Walk-in"].n:0))});
   repBar("rChCat",{labels:Object.keys(b.cat),values:Object.values(b.cat)}); repBar("rChCol",{labels:Object.keys(b.col),values:Object.values(b.col)});
   repTop=Object.keys(b.iss).map(k=>{const a=k.split("||");return [a[0],a[1]||"—",b.iss[k]];}).sort((x,y)=>y[2]-x[2]).slice(0,15); renderRT("topTable",repTop);
   repRes=Object.keys(b.res).map(k=>[k,b.res[k][0],b.res[k][2]?(b.res[k][1]/b.res[k][2]).toFixed(1)+" ★":"—"]).sort((x,y)=>y[1]-x[1]); renderRT("resTable",repRes);
-  renderFeedbackReport(b);
+  renderFeedbackReport(b); renderAnalytics(b);
+}
+function renderAnalytics(b){
+  const pr=["Urgent","High","Medium","Low"];
+  document.querySelector("#slaTable tbody").innerHTML=pr.map(p=>{ const x=(b.sl||{})[p]||[0,0], pc=x[1]?Math.round(100*x[0]/x[1]):0; return `<tr><td>${esc(p)}</td><td>${SLA_H[p]} h</td><td>${x[1]}</td><td>${x[1]?`<span class="sla-bar"><i style="width:${pc}%"></i></span>${pc}%`:"—"}</td></tr>`; }).join("");
+  const cats=Object.keys(b.cat).sort((x,y)=>b.cat[y]-b.cat[x]);
+  document.querySelector("#catTable tbody").innerHTML=cats.map(c=>{ const t=(b.ct||{})[c], r=(b.cr||{})[c], avg=r&&r[1]?r[0]/r[1]:0;
+    return `<tr><td>${esc(c)}</td><td>${b.cat[c]}</td><td>${t&&t[1]?esc(fmtH(t[0]/t[1])):"—"}</td><td>${r&&r[1]?`<span class="${avg<3.5?"sla-late":""}">${avg.toFixed(1)} ★</span> <span style="color:var(--muted)">(${r[1]})</span>`:"—"}</td></tr>`; }).join("")||'<tr><td colspan="4" style="text-align:center;color:var(--muted);">No data.</td></tr>';
+  const order=[1,2,3,4,5,6,0];
+  repBar("rChDow",{labels:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],values:order.map(i=>(b.dw||[])[i]||0),color:"#0a7ea4"});
+  repBar("rChHour",{labels:Array.from({length:24},(_,h)=>String(h).padStart(2,"0")),values:(b.hr||[]).slice(0,24),color:"#c8972b"});
 }
 function renderFeedbackReport(b){
   const sd=b.sd||[0,0,0,0,0], tot=sd.reduce((a,x)=>a+x,0), fin=(b.st["Resolved"]||0)+(b.st["Closed"]||0);
@@ -914,7 +1008,7 @@ function renderFeedbackReport(b){
   document.getElementById("fbSide").innerHTML=`<div style="font-size:.86rem;margin-bottom:10px;"><strong>Response rate:</strong> ${fin?Math.round(100*tot/fin):0}% <span style="color:var(--muted);">(${tot} of ${fin} finished tickets)</span></div>`+
     (tags.length?`<div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Most chosen reasons</div>${tags.map(x=>`<span class="fb-tag">${esc(x)} · ${b.tg[x]}</span>`).join("")}`:'<div style="color:var(--muted);font-size:.84rem;">No reasons chosen yet.</div>');
 }
-function repBar(id,d){ ensureChart().then(()=>{ if(charts[id])charts[id].destroy(); charts[id]=new Chart(document.getElementById(id),{type:"bar",data:{labels:d.labels,datasets:[{data:d.values,backgroundColor:PALETTE,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{precision:0}}}}}); }).catch(()=>{}); }
+function repBar(id,d){ ensureChart().then(()=>{ if(charts[id])charts[id].destroy(); charts[id]=new Chart(document.getElementById(id),{type:"bar",data:{labels:d.labels,datasets:[{data:d.values,backgroundColor:d.color||PALETTE,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{precision:0}}}}}); }).catch(()=>{}); }
 function renderRT(id,rows){ document.querySelector("#"+id+" tbody").innerHTML=rows.length?rows.map(r=>`<tr>${r.map(c=>`<td>${esc(String(c))}</td>`).join("")}</tr>`).join(""):`<tr><td colspan="3" style="text-align:center;color:var(--muted);">No data.</td></tr>`; }
 function sortRep(w,c){ const rows=w==="top"?repTop:repRes; rows.sort((a,b)=>{const x=a[c],y=b[c];return (!isNaN(parseFloat(x))&&!isNaN(parseFloat(y)))?(parseFloat(y)||0)-(parseFloat(x)||0):String(x).localeCompare(String(y));}); renderRT(w==="top"?"topTable":"resTable",rows); }
 async function exportPDF(){
@@ -1005,39 +1099,79 @@ async function runArchiveNow(){
 }
 
 // ── USERS ─────────────────────────────────────────────────────
-async function loadUsers(){ const res=await api("getUsers"); if(!res.ok){document.querySelector("#usersTable tbody").innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--red);">${esc(res.error||'Access denied.')}</td></tr>`;return;} ALL_ROLES=res.roles||ALL_ROLES;
+async function loadUsers(){ const res=await api("getUsers"); if(!res.ok){document.querySelector("#usersTable tbody").innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--red);">${esc(res.error||'Access denied.')}</td></tr>`;return;} ALL_ROLES=res.roles||ALL_ROLES;
   document.querySelector("#usersTable tbody").innerHTML=(window._users=res.users).map((u,i)=>`<tr>
-    <td><strong>${esc(u.name)}</strong></td><td>${esc(u.username)}</td>
+    <td><strong>${esc(u.name)}</strong></td><td>${esc(u.username)}</td><td>${esc(u.email)||'<span style="color:var(--muted)">—</span>'}</td>
     <td>${u.roles.map(r=>`<span class="rchip">${esc(r)}</span>`).join("")}</td>
-    <td><span class="ustatus ${u.status==='Active'?'us-active':'us-disabled'}">${esc(u.status)}</span></td>
+    <td><span class="ustatus ${u.status==='Active'?'us-active':'us-disabled'}">${esc(u.status)}</span>${u.locked?` <span class="ustatus us-disabled">🔒 Locked</span> <button class="btn btn-warning" style="padding:3px 9px;" data-u="${esc(u.username)}" onclick="unlockUser(this.dataset.u)">Unlock</button>`:""}</td>
     <td><button class="btn btn-outline" style="padding:5px 11px;" onclick="editUserIdx(${i})">Edit</button> ${u.username.toLowerCase()!=='admin'?`<button class="btn btn-danger" style="padding:5px 11px;" data-u="${esc(u.username)}" onclick="delUser(this.dataset.u)">Delete</button>`:''}</td>
-  </tr>`).join("")||`<tr><td colspan="5" class="no-tickets">No users.</td></tr>`;
+  </tr>`).join("")||`<tr><td colspan="6" class="no-tickets">No users.</td></tr>`;
 }
 function editUserIdx(i){ if(window._users&&window._users[i]) editUser(window._users[i]); }
-function openUserModal(){ editingUser=null; document.getElementById("userModalTitle").textContent="Add User"; document.getElementById("ufName").value="";document.getElementById("ufUser").value="";document.getElementById("ufUser").disabled=false;document.getElementById("ufPass").value="";document.getElementById("ufPassLabel").innerHTML="Password *";document.getElementById("ufStatus").value="Active"; renderRoleChecks([]); document.getElementById("userModal").classList.add("on"); }
-function editUser(u){ editingUser=u.username; document.getElementById("userModalTitle").textContent="Edit User"; document.getElementById("ufName").value=u.name;document.getElementById("ufUser").value=u.username;document.getElementById("ufUser").disabled=true;document.getElementById("ufPass").value="";document.getElementById("ufPassLabel").innerHTML="Password <span style='font-weight:400;color:var(--muted)'>(leave blank to keep)</span>";document.getElementById("ufStatus").value=u.status; renderRoleChecks(u.roles); document.getElementById("userModal").classList.add("on"); }
+function openUserModal(){ editingUser=null; document.getElementById("userModalTitle").textContent="Add User"; document.getElementById("ufName").value="";document.getElementById("ufUser").value="";document.getElementById("ufEmail").value="";document.getElementById("ufUser").disabled=false;document.getElementById("ufPass").value="";document.getElementById("ufPassLabel").innerHTML="Password *";document.getElementById("ufStatus").value="Active"; renderRoleChecks([]); document.getElementById("userModal").classList.add("on"); }
+function editUser(u){ editingUser=u.username; document.getElementById("userModalTitle").textContent="Edit User"; document.getElementById("ufName").value=u.name;document.getElementById("ufUser").value=u.username;document.getElementById("ufEmail").value=u.email||"";document.getElementById("ufUser").disabled=true;document.getElementById("ufPass").value="";document.getElementById("ufPassLabel").innerHTML="Password <span style='font-weight:400;color:var(--muted)'>(leave blank to keep)</span>";document.getElementById("ufStatus").value=u.status; renderRoleChecks(u.roles); document.getElementById("userModal").classList.add("on"); }
 function renderRoleChecks(sel){ document.getElementById("roleChecks").innerHTML=ALL_ROLES.map(r=>`<label><input type="checkbox" value="${esc(r)}" ${sel.indexOf(r)>-1?"checked":""}/> ${esc(r)}</label>`).join(""); }
 function getCheckedRoles(){ return [...document.querySelectorAll("#roleChecks input:checked")].map(i=>i.value); }
 async function saveUser(){
-  const name=gv("ufName"),user=gv("ufUser"),pass=document.getElementById("ufPass").value,roles=getCheckedRoles(),status=gv("ufStatus");
+  const email=gv("ufEmail"),name=gv("ufName"),user=gv("ufUser"),pass=document.getElementById("ufPass").value,roles=getCheckedRoles(),status=gv("ufStatus");
   if(!name||!user){alert("Name and username required.");return;} if(!roles.length){alert("Assign at least one role.");return;}
   let res;
-  if(editingUser){ res=await api("updateUser",{username:editingUser,name,roles,status,password:pass||undefined}); }
-  else{ if(!pass){alert("Password required for new user.");return;} res=await api("addUser",{username:user,name,password:pass,roles,status}); }
+  if(editingUser){ res=await api("updateUser",{username:editingUser,name,roles,status,email,password:pass||undefined}); }
+  else{ if(!pass){alert("Password required for new user.");return;} res=await api("addUser",{username:user,name,password:pass,roles,status,email}); }
   if(res.ok){closeModal("userModal");toast("✅ User saved.");loadUsers();}else toast("❌ "+res.error);
 }
+async function unlockUser(u){ const res=await api("unlockUser",{username:u}); if(res.ok){ toast("🔓 Sign-in unlocked for "+u+"."); loadUsers(); } else toast("❌ "+res.error); }
 async function delUser(u){ if(!confirm("Delete user '"+u+"'?"))return; const res=await api("deleteUser",{username:u}); if(res.ok){toast("🗑 User deleted.");loadUsers();}else toast("❌ "+res.error); }
 
 // ── SETTINGS ──────────────────────────────────────────────────
-async function loadSettings(){ try{ const res=await api("getSettings"); if(res.ok&&res.settings){ if(res.settings.colleagues){try{colleagues=JSON.parse(res.settings.colleagues);}catch(e){}} window._settings=res.settings; } }catch(e){} }
-function fillSettings(){ const s=window._settings||{}; document.getElementById("setDashUrl").value=s.dashboardUrl||""; document.getElementById("setFbUrl").value=s.responseUrl||""; document.getElementById("setAdminEmail").value=s.adminEmail||"support@mygmu.ac.ae"; document.getElementById("setActionBtn").checked=(s.showActionButton!=="0"); renderColl(); updateTestLinks(); }
+async function loadSettings(){ try{ const res=await api("getSettings"); if(res.ok&&res.settings){ if(res.settings.colleagues){try{colleagues=JSON.parse(res.settings.colleagues);}catch(e){}} window._settings=res.settings; if(res.assignees) assignees=res.assignees; } }catch(e){} }
+function fillSettings(){ const s=window._settings||{}; document.getElementById("setDashUrl").value=s.dashboardUrl||""; document.getElementById("setFbUrl").value=s.responseUrl||""; document.getElementById("setAdminEmail").value=s.adminEmail||"support@mygmu.ac.ae"; document.getElementById("setActionBtn").checked=(s.showActionButton!=="0"); renderColl(); renderRouting(); updateTestLinks(); updatePauseUI(); }
 /* Shows a "Test this link" button as soon as a valid https address is typed, so a wrong address is caught before anyone clicks it. */
 function updateTestLinks(){ [["setDashUrl","testDash"],["setFbUrl","testConf"]].forEach(p=>{ const v=gv(p[0]), a=document.getElementById(p[1]); if(/^https:\/\/[^\s"'<>]+$/.test(v)){ a.href=v; a.style.display=""; } else { a.removeAttribute("href"); a.style.display="none"; } });
-  document.getElementById("confWarn").style.display=/^https:\/\/sites\.google\.com\//i.test(gv("setFbUrl"))?"block":"none"; }
+  const site=(window._settings&&window._settings.siteUrl)||"", onSites=v=>/^https:\/\/sites\.google\.com\//i.test(v), ok=v=>/^https:\/\/[^\s"'<>]+$/.test(v);
+  const use=(v,page)=>(ok(v)&&!(onSites(v)&&site))?v:(site?site+page:"");
+  document.getElementById("confWarn").style.display=onSites(gv("setFbUrl"))&&site?"block":"none";
+  const c=use(gv("setFbUrl"),"confirm.html"), s=use(gv("setDashUrl"),"dashboard.html");
+  document.getElementById("confUse").textContent=c?"E-mail buttons will open: "+c:"No address is set — the Yes / No buttons will not appear in e-mails.";
+  document.getElementById("dashUse").textContent=s?"The support e-mail button will open: "+s:"";
+}
 function renderColl(){ document.getElementById("collList").innerHTML=colleagues.map((c,i)=>`<div class="coll-item"><span>${esc(c)}</span>${i>0?`<button class="coll-rm" onclick="rmColl(${i})">×</button>`:'<span style="font-size:.7rem;color:var(--muted);">(Primary)</span>'}</div>`).join(""); }
 function addColleague(){ const v=gv("newColl"); if(!v)return; if(colleagues.includes(v)){alert("Already added.");return;} colleagues.push(v); document.getElementById("newColl").value=""; renderColl(); }
 function rmColl(i){ colleagues.splice(i,1); renderColl(); }
-async function saveSettings(){ const payload={colleagues:JSON.stringify(colleagues),adminEmail:gv("setAdminEmail"),dashboardUrl:gv("setDashUrl"),responseUrl:gv("setFbUrl"),showActionButton:document.getElementById("setActionBtn").checked?"1":"0"}; const res=await api("saveSettings",payload); if(res.ok){window._settings=payload;toast("✅ Settings saved.");}else toast("❌ "+res.error); }
+async function saveSettings(){ const payload={colleagues:JSON.stringify(colleagues),adminEmail:gv("setAdminEmail"),dashboardUrl:gv("setDashUrl"),responseUrl:gv("setFbUrl"),showActionButton:document.getElementById("setActionBtn").checked?"1":"0"}; const res=await api("saveSettings",payload); if(res.ok){window._settings=Object.assign(window._settings||{},payload);toast("✅ Settings saved.");}else toast("❌ "+res.error); }
+/* Category → person rules */
+function updatePauseUI(){
+  const paused=((window._settings||{}).formsPaused==="1"), bar=document.getElementById("pauseBar"); if(bar) bar.style.display=paused?"block":"none";
+  const st=document.getElementById("pauseState"), b=document.getElementById("pauseBtn"); if(st) st.textContent=paused?"PAUSED":"Open";
+  if(b){ b.textContent=paused?"▶ Resume public forms":"⏸ Pause public forms"; b.className="btn "+(paused?"btn-success":"btn-danger"); }
+}
+async function togglePause(){
+  const paused=((window._settings||{}).formsPaused==="1");
+  if(!paused&&!confirm("Pause the public ticket forms now? Visitors will be asked to e-mail support until you resume them.")) return;
+  const res=await api("saveSettings",{formsPaused:paused?"0":"1"});
+  if(res.ok){ window._settings=Object.assign(window._settings||{},{formsPaused:paused?"0":"1"}); updatePauseUI(); toast(paused?"▶ Public forms are open again.":"⏸ Public forms are paused."); }
+  else toast("❌ "+res.error);
+}
+function currentRouting(){ try{ return JSON.parse((window._settings||{}).routing||"{}")||{}; }catch(e){ return {}; } }
+async function renderRouting(){
+  const box=document.getElementById("routingList"); if(!box) return;
+  if(!assignees.length) await loadSettings();                       // a User Admin cannot see tickets, so the people list comes with the settings
+  const cur=currentRouting(); box.textContent="";
+  CATS.forEach((c,i)=>{ const row=document.createElement("div"); row.style.cssText="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center;margin-bottom:8px;";
+    const lb=document.createElement("label"); lb.textContent=c; lb.style.cssText="font-size:.84rem;font-weight:600;color:var(--navy);"; lb.htmlFor="route"+i;
+    const sel=document.createElement("select"); sel.id="route"+i; sel.dataset.cat=c; sel.style.cssText="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:.85rem;";
+    const none=document.createElement("option"); none.value=""; none.textContent="— Not assigned automatically —"; sel.appendChild(none);
+    const names=assignees.slice(); if(cur[c]&&names.indexOf(cur[c])<0) names.push(cur[c]);
+    names.forEach(n=>{ const o=document.createElement("option"); o.textContent=n; sel.appendChild(o); }); sel.value=cur[c]||"";
+    row.appendChild(lb); row.appendChild(sel); box.appendChild(row); });
+}
+async function saveRouting(){
+  const rules={}; document.querySelectorAll("#routingList select").forEach(sel=>{ if(sel.value) rules[sel.dataset.cat]=sel.value; });
+  const btn=document.getElementById("routeSaveBtn"); btn.disabled=true;
+  const res=await api("saveSettings",{routing:rules}); btn.disabled=false;
+  if(res.ok){ window._settings=Object.assign(window._settings||{},{routing:JSON.stringify(rules)}); toast("✅ Assignment rules saved — "+Object.keys(rules).length+" categor"+(Object.keys(rules).length===1?"y":"ies")+" assigned automatically."); }
+  else toast("❌ "+res.error);
+}
 async function confirmReset(){ const p=document.getElementById("resetPwd").value; if(!p){alert("Enter reset password.");return;} if(!confirm("Permanently delete ALL tickets?"))return; const res=await api("resetTickets",{password:p}); if(res.ok){toast("🗑 All tickets reset.");document.getElementById("resetPwd").value="";loadAll();}else toast("❌ "+res.error); }
 
 // ── SEARCH (topbar) ───────────────────────────────────────────
@@ -1060,6 +1194,127 @@ document.addEventListener("visibilitychange",()=>{ if(!document.hidden) pollOnce
 
 // ── BOOT ──────────────────────────────────────────────────────
 window.addEventListener("load",()=>{ warm(); if(TOKEN && ME){ enterApp(); } });
+
+/* ============ TICKET LOG — every ticket, live and archived ============ */
+const LOG={rows:[],view:[],shown:100,sort:{k:"timestamp",dir:-1},months:[],indexLoaded:false,cache:{},busy:false};
+const debouncedLog=debounce(()=>filterLog(),160);
+function clipText(v,n){ v=String(v||"").replace(/\s+/g," ").trim(); return v.length>n?v.slice(0,n-1)+"…":v; }
+function fillLogControls(){
+  const sel=document.getElementById("logPeriod"), cur=sel.value||"live";
+  sel.innerHTML='<option value="live">Live tickets (this month and unfinished)</option><option value="all">Everything — live + every archived month</option>'+LOG.months.map(m=>`<option value="${esc(m.month)}">${esc(mname(m.month))} — archived (${m.tickets})</option>`).join("");
+  sel.value=[...sel.options].some(o=>o.value===cur)?cur:"live";
+  document.getElementById("logCat").innerHTML='<option value="All">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join("");
+  const a=document.getElementById("logAsg"), ca=a.value||"All";
+  a.innerHTML='<option value="All">Anyone</option><option value="__me__">👤 My tickets</option><option value="__none__">Unassigned</option>'+assigneeNames().map(n=>`<option>${esc(n)}</option>`).join(""); a.value=[...a.options].some(o=>o.value===ca)?ca:"All";
+}
+async function logMonth(mk){
+  const hit=LOG.cache[mk]; if(hit&&Date.now()-hit.at<300000) return hit.t;
+  const r=await api("getArchiveMonth",{month:mk}); const t=(r.ok?r.tickets:[]).map(x=>Object.assign({},x,{_src:"archive",_month:mk})); LOG.cache[mk]={t:t,at:Date.now()}; return t;
+}
+async function loadLog(){
+  if(LOG.busy) return; LOG.busy=true;
+  try{
+    if(!LOG.indexLoaded){ const r=await api("getArchiveIndex"); LOG.months=(r.ok?r.months||[]:[]).slice().sort((a,b)=>a.month<b.month?1:-1); LOG.indexLoaded=true; }
+    fillLogControls();
+    const p=document.getElementById("logPeriod").value||"live";
+    let rows=(p==="live"||p==="all")?allTickets.map(t=>Object.assign({},t,{_src:"live"})):[];
+    const months=p==="all"?LOG.months.map(m=>m.month):(p==="live"?[]:[p]);
+    let done=0;
+    for(let i=0;i<months.length;i+=3){                                     // up to three archived months are fetched at the same time
+      document.getElementById("logSummary").innerHTML=`<div class="rsum"><div class="n" style="font-size:1rem;">Loading ${done+1}–${Math.min(done+3,months.length)} of ${months.length} archived months…</div></div>`;
+      const got=await Promise.all(months.slice(i,i+3).map(logMonth)); got.forEach(g=>{ rows=rows.concat(g); }); done+=3;
+    }
+    LOG.rows=rows; filterLog();
+  } finally { LOG.busy=false; }
+}
+function filterLog(){
+  const q=gv("logSearch").toLowerCase(), st=gv("logStatus")||"All", cat=gv("logCat")||"All", asg=gv("logAsg")||"All", fb=gv("logFb")||"All";
+  LOG.view=LOG.rows.filter(t=>(st==="All"||t.status===st)&&(cat==="All"||t.category===cat)&&asgMatch(t,asg)&&fbMatch(t,fb)&&(!q||[t.ticketId,t.name,t.gmuEmail,t.regEmpId,t.category,t.subcategory,t.description,t.resolutionNotes,t.feedback,t.feedbackTags,t.assignedTo,t.resolvedBy].join(" ").toLowerCase().indexOf(q)>-1));
+  sortLogRows(); LOG.shown=100; renderLog();
+}
+function sortLogRows(){ const k=LOG.sort.k, d=LOG.sort.dir; const pri={Urgent:4,High:3,Medium:2,Low:1};
+  LOG.view.sort((a,b)=>{ let x=a[k],y=b[k]; if(k==="rating") return ((Number(x)||0)-(Number(y)||0))*d; if(k==="priority") return ((pri[x]||0)-(pri[y]||0))*d; if(k==="timestamp") return ((new Date(x)||0)-(new Date(y)||0))*d; return String(x||"").localeCompare(String(y||""),undefined,{numeric:true})*d; }); }
+function sortLog(k){ LOG.sort=(LOG.sort.k===k)?{k:k,dir:-LOG.sort.dir}:{k:k,dir:(k==="timestamp"||k==="rating"||k==="priority")?-1:1}; sortLogRows(); LOG.shown=100; renderLog(); }
+function renderLog(){
+  const v=LOG.view, rated=v.filter(t=>Number(t.rating)>0), fin=v.filter(t=>t.status==="Resolved"||t.status==="Closed");
+  const sol=v.filter(t=>t.solutionSentAt&&t.timestamp).map(t=>bizHours(new Date(t.timestamp),new Date(t.solutionSentAt))).filter(h=>h>=0);
+  document.getElementById("logSummary").innerHTML=`
+    <div class="rsum"><div class="n">${v.length}</div><div class="l">Tickets shown</div></div>
+    <div class="rsum"><div class="n">${fin.length}</div><div class="l">Resolved / Closed</div></div>
+    <div class="rsum"><div class="n">${rated.length}</div><div class="l">With feedback</div></div>
+    <div class="rsum"><div class="n">${rated.length?(rated.reduce((a,t)=>a+Number(t.rating),0)/rated.length).toFixed(1)+" ★":"—"}</div><div class="l">Avg Rating</div></div>
+    <div class="rsum"><div class="n">${sol.length?esc(fmtH(sol.reduce((a,h)=>a+h,0)/sol.length)):"—"}</div><div class="l">Avg Time to Solution</div></div>`;
+  const rows=v.slice(0,LOG.shown);
+  document.querySelector("#logTable tbody").innerHTML=rows.length?rows.map(t=>`<tr class="arc-row" data-id="${esc(t.ticketId)}" onclick="openLogTicket(this.dataset.id)">
+    <td><strong>${esc(t.ticketId)}</strong></td><td>${esc(dshort(t.timestamp))}</td><td>${esc(t.name)}</td><td>${esc(t.category)}</td>
+    <td><span class="badge b-${pcap(t.priority).toLowerCase()}">${esc(pcap(t.priority))}</span></td><td><span class="badge b-${skey(t.status)}">${esc(t.status)}</span></td>
+    <td>${t.assignedTo?esc(t.assignedTo):'<span style="color:var(--muted)">—</span>'}</td>
+    <td class="clip" title="${esc(t.resolutionNotes)}">${esc(clipText(t.resolutionNotes,70))||'<span style="color:var(--muted)">—</span>'}</td>
+    <td style="white-space:nowrap;">${Number(t.rating)>0?`<span class="fb-stars" style="font-size:.9rem;">${esc(starsTxt(t.rating))}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+    <td class="clip" title="${esc(t.feedback)}">${esc(clipText((t.feedback&&!/^\[Requester reply\]/.test(t.feedback))?t.feedback:"",60))||'<span style="color:var(--muted)">—</span>'}</td></tr>`).join(""):'<tr><td colspan="10" class="no-tickets">No tickets match.</td></tr>';
+  document.getElementById("logMore").innerHTML=v.length>LOG.shown?`<button class="btn btn-outline" style="margin:10px;" onclick="LOG.shown+=100;renderLog()">Show more (${v.length-LOG.shown} remaining)</button>`:"";
+}
+function logDetailHTML(t){
+  const row=(l,v)=>`<div class="iitem"><label>${esc(l)}</label><span>${v}</span></div>`, box=(label,html)=>`<div style="margin-top:12px;"><div style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px;">${esc(label)}</div>${html}</div>`;
+  const ev=[]; const add=(l,ts,x)=>{ if(ts) ev.push({l:l,t:ts,x:x||""}); };
+  add("Ticket raised",t.timestamp,t.source+" submission"); add("Solution sent to the requester",t.solutionSentAt,t.resolvedBy?"by "+t.resolvedBy:""); add("Marked resolved",t.resolvedAt);
+  add("Feedback received",t.feedbackAt,Number(t.rating)>0?starsTxt(t.rating)+" "+t.rating+"/5":"");
+  ev.sort((a,b)=>new Date(a.t)-new Date(b.t));
+  const tsol=(t.timestamp&&(t.solutionSentAt||t.resolvedAt))?bizHours(new Date(t.timestamp),new Date(t.solutionSentAt||t.resolvedAt)):null;
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;"><span class="badge b-${skey(t.status)}">${esc(t.status)}</span><span class="badge b-${pcap(t.priority).toLowerCase()}">${esc(pcap(t.priority))}</span>${t.assignedTo?`<span class="badge b-asg">👤 ${esc(t.assignedTo)}</span>`:'<span class="badge">Unassigned</span>'}<span class="badge">${t._src==="archive"?"🗄 Archived "+esc(mname(t._month||""))+" · read-only":"Live ticket"}</span></div>
+    <div class="tline">${ev.map(e=>`<div class="tline-i"><b>${esc(e.l)}</b> <span>${esc(dt(e.t))}${e.x?" · "+esc(e.x):""}</span></div>`).join("")}</div>
+    ${tsol!==null?`<div class="sat-sub">Time to solution: <strong>${esc(fmtH(tsol))}</strong> (working hours) · target for ${esc(pcap(t.priority))}: ${SLA_H[t.priority]||24} h — ${tsol<=(SLA_H[t.priority]||24)?'<span class="sla-ok">met ✓</span>':'<span class="sla-late">missed</span>'}</div>`:""}
+    ${box("Requester",`<div class="igrid">${row("Name",esc(t.name))}${row("Type",esc(t.userType))}${row(t.userType==="Student"?"Registration No":"Employee ID",esc(t.regEmpId)||"—")}${row("College / Dept",esc(t.college)||"—")}${row("Year / Role",esc(t.deptYear)||"—")}${row("Official email",esc(t.gmuEmail)||"—")}${row("Phone",esc(t.phone)||"—")}${row("Alt. email",esc(t.altEmail)||"—")}</div>`)}
+    ${box("What was raised",`<div class="igrid">${row("Category",esc(t.category))}${row("Sub-category",esc(t.subcategory))}</div><div class="desc-box" style="margin-top:6px;">${esc(t.description)}</div>`)}
+    ${t.attachments?box("Attachments",renderAtt(t.attachments)):""}
+    ${box("Solution sent",t.resolutionNotes?`<div class="desc-box">${esc(t.resolutionNotes)}</div><div class="sat-sub" style="margin-top:4px;">${t.resolvedBy?"By "+esc(t.resolvedBy):""}${t.solutionSentAt?" · "+esc(dt(t.solutionSentAt)):""}</div>`:'<div class="sat-sub">No solution has been sent yet.</div>')}
+    ${t.escalatedTo?box("Escalated",`<div class="desc-box">${esc(t.escalatedTo)}</div>`):""}
+    ${t.confirmation?box("Requester response",`<div class="desc-box">${esc(t.confirmation)}</div>`):""}
+    ${box("Feedback received",feedbackHTML(t)||'<div class="sat-sub">Not applicable yet — the ticket is still open.</div>')}`;
+}
+function openLogTicket(id){
+  const t=LOG.rows.find(x=>x.ticketId===id); if(!t) return;
+  document.getElementById("logModalTitle").textContent=t.ticketId+" — "+t.category;
+  document.getElementById("logDetail").innerHTML=logDetailHTML(t);
+  document.getElementById("logModalFoot").innerHTML=(t._src==="live"?`<button class="btn btn-primary" data-id="${esc(t.ticketId)}" onclick="closeModal('logModal');goTicket(this.dataset.id)">Open in Ticket Queue (to take action)</button> `:"")+'<button class="btn btn-outline" onclick="closeModal(\'logModal\')">Close</button>';
+  document.getElementById("logModal").classList.add("on");
+}
+function csvCell(v){ let s=String(v==null?"":v).replace(/\r?\n/g," ⏎ "); if(/^[=+\-@\t]/.test(s)) s="'"+s; return '"'+s.replace(/"/g,'""')+'"'; }       // a leading = + - @ is neutralised so Excel never runs it as a formula
+function exportLogCsv(){
+  const cols=[["Ticket No","ticketId"],["Raised","timestamp"],["Source","source"],["Requester","name"],["Type","userType"],["Reg / Employee No","regEmpId"],["College / Dept","college"],["Official email","gmuEmail"],["Category","category"],["Sub-category","subcategory"],["Priority","priority"],["Status","status"],["Assigned to","assignedTo"],["Description","description"],["Solution sent","resolutionNotes"],["Solution sent at","solutionSentAt"],["Resolved by","resolvedBy"],["Resolved at","resolvedAt"],["Requester response","confirmation"],["Rating (1-5)","rating"],["Feedback reasons","feedbackTags"],["Feedback comment","feedback"],["Feedback at","feedbackAt"],["Kept in","_where"]];
+  const lines=[cols.map(c=>csvCell(c[0])).join(",")].concat(LOG.view.map(t=>cols.map(c=>csvCell(c[1]==="_where"?(t._src==="archive"?"Archive "+t._month:"Live"):t[c[1]])).join(",")));
+  const csv="\ufeff"+lines.join("\r\n"); window._lastCsv=csv;
+  try{ const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})); const a=document.createElement("a"); a.href=url; a.download="GMU_Ticket_Log_"+new Date().toISOString().slice(0,10)+".csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),3000); toast("⬇ "+LOG.view.length+" tickets exported."); }catch(e){ toast("The file could not be created in this browser."); }
+}
+
+/* ============ NEW IN 7.2: overall satisfaction · team workload · SLA watch ============ */
+const SLA_H={Urgent:2,High:4,Medium:24,Low:48};
+function bizHours(a,z){ let t=0,cur=new Date(a.getTime()),g=0; while(cur<z&&g++<400){ const next=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate()+1), end=next<z?next:z, d=cur.getDay(); if(d!==0&&d!==6) t+=(end-cur)/3600000; cur=next; } return t; }
+function lateBy(t){ if(t.status!=="Open"&&t.status!=="In Progress") return 0; const a=new Date(t.timestamp); if(isNaN(a)) return 0; return Math.max(0,bizHours(a,new Date())-(SLA_H[t.priority]||24)); }
+function fmtH(h){ return h>=48?Math.round(h/24)+" days":h>=1?(Math.round(h*10)/10)+" h":Math.round(h*60)+" min"; }
+function renderSatisfaction(){
+  const s=STATS||{}, n=s.ratedCnt||0, avg=n?Number(s.avgRating):0, dist=s.ratingDist||[0,0,0,0,0];
+  document.getElementById("satNum").textContent=n?avg.toFixed(1):"—";
+  document.getElementById("satStars").textContent=n?starsTxt(Math.round(avg)):"";
+  document.getElementById("satPill").textContent=n?(n+" response"+(n===1?"":"s")):"No feedback yet";
+  document.getElementById("satSub").textContent=n?(s.feedbackRate+"% of finished tickets rated · "+(s.lowRatings||0)+" low rating"+((s.lowRatings||0)===1?"":"s")+" (1–2 ★) · includes archived months"):"Ratings appear here as soon as requesters give feedback.";
+  document.getElementById("satDist").innerHTML=[5,4,3,2,1].map(k=>`<div class="fb-row"><span class="lb">${k} ★</span><span class="fb-bar"><span class="fb-fill" style="display:block;width:${n?Math.round(dist[k-1]/n*100):0}%"></span></span><span class="ct">${dist[k-1]}</span></div>`).join("");
+  const tr=s.ratingTrend||[];
+  ensureChart().then(()=>{ if(charts.satTrend)charts.satTrend.destroy(); charts.satTrend=new Chart(document.getElementById("satTrend"),{type:"line",data:{labels:tr.map(x=>mname(x.m)),datasets:[{data:tr.map(x=>x.avg),borderColor:"#c8972b",backgroundColor:"rgba(200,151,43,.15)",fill:true,tension:.3,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:5,ticks:{stepSize:1}},x:{ticks:{font:{size:10}}}}}}); }).catch(()=>{});
+}
+function renderWorkload(){
+  const rows={}; const bump=(name,key)=>{ const r=rows[name]||(rows[name]={o:0,p:0,a:0,late:0}); r[key]++; };
+  allTickets.forEach(t=>{ const who=t.assignedTo||"Unassigned"; if(t.status==="Open") bump(who,"o"); else if(t.status==="In Progress") bump(who,"p"); else if(t.status==="Awaiting Confirmation") bump(who,"a"); if(lateBy(t)>0) bump(who,"late"); });
+  assignees.forEach(n=>{ if(!rows[n]) rows[n]={o:0,p:0,a:0,late:0}; });
+  const list=Object.keys(rows).sort((x,y)=>(rows[y].o+rows[y].p)-(rows[x].o+rows[x].p));
+  document.querySelector("#workTable tbody").innerHTML=list.map(n=>`<tr><td><strong>${esc(n)}</strong></td><td>${rows[n].o}</td><td>${rows[n].p}</td><td>${rows[n].a}</td><td>${rows[n].late?`<span class="sla-late">${rows[n].late}</span>`:"0"}</td></tr>`).join("")||'<tr><td colspan="5" class="no-tickets">No tickets yet.</td></tr>';
+}
+function renderSla(){
+  const late=allTickets.map(t=>({t,h:lateBy(t)})).filter(x=>x.h>0).sort((a,b)=>b.h-a.h);
+  document.getElementById("slaPill").textContent=late.length?(late.length+" overdue"):"All within target ✓";
+  document.getElementById("slaList").innerHTML=late.length?late.slice(0,6).map(x=>`<div class="sla-row" data-id="${esc(x.t.ticketId)}" onclick="goTicket(this.dataset.id)"><span><strong>${esc(x.t.ticketId)}</strong> · ${esc(x.t.category)}<br><span style="color:var(--muted);font-size:.78rem;">${esc(pcap(x.t.priority))} · ${esc(x.t.assignedTo||"Unassigned")}</span></span><span class="sla-late">${esc(fmtH(x.h))} late</span></div>`).join("")+(late.length>6?`<div class="sat-sub" style="margin-top:8px;">…and ${late.length-6} more</div>`:""):'<div class="sla-ok" style="padding:6px 0;">✓ Every open ticket is within its target (Urgent 2 h · High 4 h · Medium 24 h · Low 48 h, weekends not counted).</div>';
+}
+function goTicket(id){ nav("queue"); const f=document.getElementById("fStatus"); f.value="All"; document.getElementById("fSearch").value=""; applyFilters(); openTicket(id); }
 </script>
 </body>
 </html>
