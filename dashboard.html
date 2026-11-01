@@ -242,6 +242,15 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
 .clip{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .sla-bar{display:inline-block;width:90px;height:9px;background:var(--bg);border-radius:50px;overflow:hidden;vertical-align:middle;margin-right:6px;}.sla-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));}
 @media (max-width:900px){.sat-grid{grid-template-columns:1fr;}}
+.mcard{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(14,27,51,.05);}
+.mhead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}.mwho{flex:1;min-width:200px;}.mwhen{color:var(--muted);font-size:.78rem;}
+.msub{font-weight:700;color:var(--navy);margin:6px 0 2px;}.mexc{color:#445;font-size:.86rem;line-height:1.5;word-break:break-word;}
+.mchips{margin:8px 0;display:flex;gap:6px;flex-wrap:wrap;}.mchip{font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:50px;background:#eef3f9;color:#33475b;}
+.mchip.warn{background:#fee2e2;color:#991b1b;}.mchip.ok{background:#dcfce7;color:#166534;}.mchip.auto{background:#f1f5f9;color:#64748b;}.mchip.link{background:#e0f2fe;color:#075985;cursor:pointer;}
+.mbody{white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:.84rem;max-height:340px;overflow:auto;margin-top:8px;}
+.mfull summary{cursor:pointer;color:var(--teal);font-weight:700;font-size:.82rem;}.marow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;}
+.mstat{border-radius:10px;padding:11px 14px;font-size:.86rem;line-height:1.55;margin-bottom:14px;border:1px solid var(--border);background:#f6f9fd;}
+.mstat.bad{background:#fff3f3;border-color:#f3c2c2;color:#9b1c1c;}.mstat.good{background:#effaf3;border-color:#b7e4c7;color:#14532d;}
 .fb-box{border-radius:8px;padding:10px 14px;font-size:.84rem;border:1px solid;line-height:1.5;}
 .fb-good{background:#effaf3;border-color:#b7e4c7;}.fb-low{background:#fff3f3;border-color:#f3c2c2;}.fb-none{background:#f6f9fd;border-color:var(--border);color:var(--muted);}
 .fb-stars{color:var(--gold);letter-spacing:1px;font-size:1rem;}.fb-n{font-weight:800;}.fb-when{color:var(--muted);font-size:.78rem;}
@@ -304,6 +313,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
     <div class="sb-section">IT Operations</div>
     <div class="nav-item" data-nav="queue" data-perm="view" onclick="nav('queue')"><span class="ic">🎫</span> Ticket Queue</div>
     <div class="nav-item" data-nav="log" data-perm="view" onclick="nav('log')"><span class="ic">📒</span> Ticket Log</div>
+    <div class="nav-item" data-nav="mail" data-perm="view" onclick="nav('mail')"><span class="ic">📥</span> E-mail Requests <span class="nb" id="navMail" style="display:none;">0</span></div>
     <div class="nav-item" data-nav="walkin" data-perm="view" onclick="nav('walkin')"><span class="ic">🚶</span> Walk-in Desk <span class="nb" id="navWalk">0</span></div>
     <div class="sb-section">Analytics</div>
     <div class="nav-item" data-nav="reports" data-perm="report" onclick="nav('reports')"><span class="ic">📈</span> Reports</div>
@@ -318,6 +328,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
   <div class="main">
 
     <!-- DASHBOARD -->
+    <div id="verBar" style="display:none;background:#b45309;color:#fff;padding:10px 16px;border-radius:10px;margin-bottom:14px;font-weight:700;font-size:.86rem;line-height:1.5;" role="alert"></div>
     <div id="pauseBar" style="display:none;background:#b91c1c;color:#fff;padding:10px 16px;border-radius:10px;margin-bottom:14px;font-weight:700;font-size:.88rem;" role="alert">⏸ The public ticket forms are PAUSED — visitors are being asked to e-mail support. Open Settings → Emergency controls to resume.</div>
     <div class="page active" id="page-dashboard">
       <div class="page-head"><div><h2>Dashboard</h2><div class="crumb">Overview of your support operations</div></div></div>
@@ -368,6 +379,19 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
     </div>
 
     <!-- WALK-IN -->
+    <div class="page" id="page-mail">
+      <div class="page-head"><div><h2>E-mail Requests</h2><div class="crumb">Messages received at the support mailbox — make a ticket from the real requests, remove the rest</div></div><button class="btn btn-primary" id="mailSyncBtn" onclick="syncMail()">🔄 Check mailbox now</button></div>
+      <div id="mailStatus"></div>
+      <div class="rep-controls">
+        <div class="fg"><label>Show</label><select id="mailFilter" onchange="loadMail()"><option value="New">Waiting for a decision</option><option value="Converted">Made into tickets</option><option value="Dismissed">Removed (not tickets)</option></select></div>
+        <div class="fg"><label>Search</label><input type="text" id="mailSearch" placeholder="Name, e-mail, subject or text…" oninput="debouncedMail()" style="min-width:230px;"/></div>
+        <label class="toggle"><input type="checkbox" id="mailHideAuto" onchange="renderMail()"/> Hide automated e-mails</label>
+        <button class="btn btn-outline" onclick="mailSelectAll()">☑ Select all shown</button>
+        <button class="btn btn-danger" id="mailBulkBtn" onclick="openDismiss(null)">🗑 Not a ticket (selected)</button>
+      </div>
+      <div id="mailList"></div>
+    </div>
+
     <div class="page" id="page-log">
       <div class="page-head"><div><h2>Ticket Log</h2><div class="crumb">Every ticket — what was raised, the solution sent and the feedback received</div></div><button class="btn btn-gold" onclick="exportLogCsv()">⬇ Export to Excel (CSV)</button></div>
       <div class="rep-controls">
@@ -490,6 +514,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
         <div class="fg"><label>Team Members (Resolved By options)</label><div id="collList"></div>
           <div style="display:flex;gap:8px;margin-top:6px;"><input type="text" id="newColl" placeholder="Add colleague name…" style="flex:1;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:.85rem;"/><button class="btn btn-primary" onclick="addColleague()">+ Add</button></div></div>
         <div><button class="btn btn-success" onclick="saveSettings()">💾 Save Settings</button></div>
+        <div class="pcard" style="margin:6px 0;"><div class="pc-head"><h3>📥 E-mail intake</h3><span class="pill" id="mailState"></span></div><div class="dcard-b">
+          <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">Reads the support mailbox (<b>read-only</b>) and lists each new e-mail under <b>E-mail Requests</b>. Nothing becomes a ticket, and nobody is e-mailed, until you press “Make ticket”. First-time set-up: see EMAIL_INTAKE_GUIDE.md.</p>
+          <label class="toggle"><input type="checkbox" id="setMail"/> Read the support mailbox and list new requests for approval</label>
+          <div class="fg" style="margin-top:10px;"><label>Which e-mails to read (Gmail search)</label><input type="text" id="setMailQuery" placeholder="in:inbox -from:me -category:promotions -category:social"/></div>
+          <div class="fg"><label>Ignored senders</label><div id="mailBlockList" style="display:flex;gap:6px;flex-wrap:wrap;"></div></div>
+          <div id="mailSetStatus" class="mstat" style="display:none;"></div>
+          <div class="arow"><button class="btn btn-success" onclick="saveMailSettings()">💾 Save e-mail intake settings</button><button class="btn btn-outline" onclick="syncMail(true)">🔄 Check now</button></div>
+        </div></div>
         <div class="pcard" style="margin:6px 0;"><div class="pc-head"><h3>📌 Automatic assignment by category</h3></div><div class="dcard-b">
           <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">New tickets in a category are assigned to the person you choose. They are e-mailed (if an e-mail is saved for them under <b>Users</b>) and the ticket shows their name. Anyone can still re-assign a ticket later. Only active users who can work on tickets are listed.</p>
           <div id="routingList"></div>
@@ -564,6 +596,33 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
   </div>
   <div class="modal-f"><button class="btn btn-outline" id="pwdCancel" onclick="closeModal('pwdModal')">Cancel</button><button class="btn btn-success" id="pwdSave" onclick="submitPassword()">Save new password</button></div></div></div>
 
+<!-- E-MAIL → TICKET -->
+<div class="overlay" id="mailModal"><div class="modal" style="width:700px;max-width:96vw;"><div class="modal-h"><h3>✅ Make a ticket from this e-mail</h3><button class="modal-x" onclick="closeModal('mailModal')">×</button></div>
+  <div class="modal-b">
+    <div id="mcWarn"></div>
+    <div class="igrid">
+      <div class="fg"><label>Name *</label><input type="text" id="mcName" maxlength="80"/></div>
+      <div class="fg"><label>Official e-mail *</label><input type="email" id="mcEmail"/></div>
+      <div class="fg"><label>Type *</label><select id="mcType"><option>Student</option><option>Staff</option></select></div>
+      <div class="fg"><label>Reg / employee no. <span style="font-weight:400;color:var(--muted)">(optional)</span></label><input type="text" id="mcReg" maxlength="30"/></div>
+      <div class="fg"><label>Category *</label><select id="mcCat"></select></div>
+      <div class="fg"><label>Priority</label><select id="mcPri"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select></div>
+    </div>
+    <div class="fg"><label>Description *</label><textarea id="mcDesc" rows="9" oninput="updateMcCount()"></textarea><div class="sat-sub" id="mcCount"></div></div>
+    <div class="sat-sub">When you create the ticket, <b>the sender receives the usual confirmation e-mail</b> with the ticket number. If a category rule applies, the ticket is also assigned to that colleague.</div>
+    <div class="err" id="mcErr" style="color:var(--red);font-size:.84rem;margin-top:6px;"></div>
+  </div>
+  <div class="modal-f"><button class="btn btn-outline" onclick="closeModal('mailModal')">Cancel</button><button class="btn btn-success" id="mcBtn" onclick="submitConvert()">✅ Create ticket &amp; notify the sender</button></div></div></div>
+
+<!-- NOT A TICKET -->
+<div class="overlay" id="mailDismissModal"><div class="modal" style="width:520px;max-width:94vw;"><div class="modal-h"><h3>🗑 Not a ticket</h3><button class="modal-x" onclick="closeModal('mailDismissModal')">×</button></div>
+  <div class="modal-b"><p id="mdText" style="font-size:.9rem;margin-bottom:10px;"></p>
+    <label style="display:block;margin:6px 0;"><input type="radio" name="mdBlock" value="" checked/> Just remove it</label>
+    <label style="display:block;margin:6px 0;" id="mdSenderRow"><input type="radio" name="mdBlock" value="sender"/> Remove it, and <b>ignore future e-mails from this sender</b></label>
+    <label style="display:block;margin:6px 0;" id="mdDomainRow"><input type="radio" name="mdBlock" value="domain"/> Remove it, and ignore <b>everything from <span id="mdDomain"></span></b></label>
+    <div class="sat-sub" style="margin-top:8px;">Removed e-mails can be brought back from “Removed (not tickets)”. Nobody is e-mailed.</div></div>
+  <div class="modal-f"><button class="btn btn-outline" onclick="closeModal('mailDismissModal')">Cancel</button><button class="btn btn-danger" onclick="submitDismiss()">🗑 Remove</button></div></div></div>
+
 <!-- TICKET LOG DETAIL -->
 <div class="overlay" id="logModal"><div class="modal" style="width:760px;max-width:96vw;"><div class="modal-h"><h3 id="logModalTitle">Ticket</h3><button class="modal-x" onclick="closeModal('logModal')">×</button></div>
   <div class="modal-b" id="logDetail"></div>
@@ -597,11 +656,16 @@ async function ensurePdf(){ if(!(window.jspdf&&window.jspdf.jsPDF)) await loadSc
 function warm(){ if(SCRIPT_URL.indexOf("PASTE_")===0) return; try{ fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"ping"}),keepalive:true}).catch(()=>{}); }catch(e){} }
 
 // ── API ───────────────────────────────────────────────────────
+const UI_VERSION="7.5";
+function verNum(v){ return String(v||"0").split(".").map(x=>parseInt(x,10)||0); }
+function verOlder(a,b){ const x=verNum(a),y=verNum(b); for(let i=0;i<3;i++){ if((x[i]||0)!==(y[i]||0)) return (x[i]||0)<(y[i]||0); } return false; }
+function showVersionBar(){ const b=document.getElementById("verBar"); if(!b) return; b.textContent="⚠ This page is newer than the server code it talks to, so some buttons will not work yet. In Apps Script open Deploy → Manage deployments → ✏ (edit) → Version: New version → Deploy — then refresh this page (Ctrl + F5)."; b.style.display="block"; }
 async function api(action,data={}){
   const res=await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action,data,token:TOKEN})});
   const json=await res.json();
   if(json && json.error==="AUTH"){ forceLogout("Session expired. Please sign in again."); throw new Error("AUTH"); }
   if(json && json.error==="PASSWORD_CHANGE_REQUIRED"){ openPwdModal(true); }
+  if(json && json.ok===false && json.error==="Unknown action."){ json.error="The server code is older than this page and does not know this action. In Apps Script open Deploy → Manage deployments → ✏ → Version: New version → Deploy, then refresh this page."; showVersionBar(); }
   return json;
 }
 
@@ -650,7 +714,7 @@ function openHashTicket(){
 function hasRole(r){ return ME && (ME.roles.indexOf("Super Admin")>-1 || ME.roles.indexOf(r)>-1); }
 /* Mirrors the permissions enforced by the server. These only decide what is SHOWN; the server refuses anything not allowed. */
 const PERMS={view:["Ticket Agent","Walk-in Desk"],report:["Reports","Ticket Agent","Walk-in Desk"],email:["Ticket Agent"],users:["User Admin"],settings:["User Admin"]};
-const NAV_PERM={dashboard:"view",queue:"view",log:"view",walkin:"view",reports:"report",archive:"view",users:"users",settings:"settings"};
+const NAV_PERM={dashboard:"view",queue:"view",log:"view",mail:"view",walkin:"view",reports:"report",archive:"view",users:"users",settings:"settings"};
 function hasPerm(p){ return !!ME && (ME.roles.indexOf("Super Admin")>-1 || (PERMS[p]||[]).some(r=>ME.roles.indexOf(r)>-1)); }
 function applyRoleVisibility(){
   document.querySelectorAll("[data-perm]").forEach(el=>{ el.style.display = hasPerm(el.dataset.perm)?"":"none"; });
@@ -702,6 +766,7 @@ function nav(name){
   if(name==="dashboard") renderDashboard();
   if(name==="walkin") renderWalkin();
   if(name==="log") loadLog();
+  if(name==="mail") loadMail();
   if(name==="reports") loadReports();
   if(name==="archive") loadArchivePage();
   if(name==="users") loadUsers();
@@ -737,7 +802,8 @@ async function refresh(){
     const res=await api("getDashboard"); if(!res.ok) return;
     VER=res.v; allTickets=res.tickets; STATS=res.stats; assignees=res.assignees||assignees;
     if(res.settings) applySettings(res.settings);
-    buildAssigneeFilter(); updateMyCount();
+    buildAssigneeFilter(); updateMyCount(); updateMailBadge(res.emailNew||0);
+    if(!res.serverVersion||verOlder(res.serverVersion,UI_VERSION)) showVersionBar(); else { const vb=document.getElementById("verBar"); if(vb) vb.style.display="none"; }
     renderStatCards(STATS); updateWalkBadge(); applyFilters(); checkNew(allTickets.length);
     if(isActive("dashboard")) renderDashboard();
     if(isActive("walkin")) renderWalkin();
@@ -989,7 +1055,7 @@ function mname(mk){ const a=String(mk).split("-"); return (MN[(+a[1])-1]||a[1]).
 function thisMonth(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
 function monthShift(mk,n){ let y=+mk.slice(0,4), m=+mk.slice(5,7)+n; while(m<1){m+=12;y--;} while(m>12){m-=12;y++;} return y+"-"+String(m).padStart(2,"0"); }
 async function loadReports(){
-  if(!REP||Date.now()-REP_AT>60000){ const res=await api("getReport"); if(!res.ok) return; REP=res; REP_AT=Date.now(); }
+  if(!REP||Date.now()-REP_AT>60000){ const res=await api("getReport"); if(!res.ok||!Array.isArray(res.months)) return; REP=res; REP_AT=Date.now(); }
   if(!gv("repFrom")) repPreset("year",true);
   buildReports();
 }
@@ -1189,7 +1255,7 @@ async function delUser(u){ if(!confirm("Delete user '"+u+"'?"))return; const res
 
 // ── SETTINGS ──────────────────────────────────────────────────
 async function loadSettings(){ try{ const res=await api("getSettings"); if(res.ok&&res.settings){ if(res.settings.colleagues){try{colleagues=JSON.parse(res.settings.colleagues);}catch(e){}} window._settings=res.settings; if(res.assignees) assignees=res.assignees; } }catch(e){} }
-function fillSettings(){ const s=window._settings||{}; document.getElementById("setDashUrl").value=s.dashboardUrl||""; document.getElementById("setFbUrl").value=s.responseUrl||""; document.getElementById("setAdminEmail").value=s.adminEmail||"support@mygmu.ac.ae"; document.getElementById("setActionBtn").checked=(s.showActionButton!=="0"); renderColl(); renderRouting(); updateTestLinks(); updatePauseUI(); }
+function fillSettings(){ const s=window._settings||{}; document.getElementById("setDashUrl").value=s.dashboardUrl||""; document.getElementById("setFbUrl").value=s.responseUrl||""; document.getElementById("setAdminEmail").value=s.adminEmail||"support@mygmu.ac.ae"; document.getElementById("setActionBtn").checked=(s.showActionButton!=="0"); renderColl(); renderRouting(); updateTestLinks(); updatePauseUI(); fillMailSettings(); }
 /* Shows a "Test this link" button as soon as a valid https address is typed, so a wrong address is caught before anyone clicks it. */
 function updateTestLinks(){ [["setDashUrl","testDash"],["setFbUrl","testConf"]].forEach(p=>{ const v=gv(p[0]), a=document.getElementById(p[1]); if(/^https:\/\/[^\s"'<>]+$/.test(v)){ a.href=v; a.style.display=""; } else { a.removeAttribute("href"); a.style.display="none"; } });
   const site=(window._settings&&window._settings.siteUrl)||"", onSites=v=>/^https:\/\/sites\.google\.com\//i.test(v), ok=v=>/^https:\/\/[^\s"'<>]+$/.test(v);
@@ -1258,6 +1324,146 @@ document.addEventListener("visibilitychange",()=>{ if(!document.hidden) pollOnce
 
 // ── BOOT ──────────────────────────────────────────────────────
 window.addEventListener("load",()=>{ warm(); if(TOKEN && ME){ enterApp(); } });
+
+/* ============ E-MAIL REQUESTS — approve or remove what arrives at the support mailbox ============ */
+const MAIL={data:null,sel:{},one:null,toldNew:false};
+const debouncedMail=debounce(()=>renderMail(),160);
+const PITCH=/\b(click|visit|verify|password|login|urgent|suspended|whatsapp|telegram)\b/i, LINKY=/(https?|www\.|\.com|\.net|\.org|\.ae|\.edu|\.gov|\.io|\.me|@)/i;
+function okName(v){ v=String(v||"").trim(); return /^[\p{L}\p{M}][\p{L}\p{M}'’.\- ]{1,79}$/u.test(v)&&!LINKY.test(v)&&!PITCH.test(v)&&v.split(/\s+/).length<=6; }
+function niceName(name,email){
+  if(okName(name)) return name.trim();
+  const base=String(email||"").split("@")[0].replace(/[._\-+]+/g," ").replace(/[0-9]+/g," ").replace(/\s+/g," ").trim();
+  return base.split(" ").filter(Boolean).map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(" ");
+}
+/* A first guess at the category from the words used — always editable */
+function suggestCategory(t){
+  t=String(t||"").toLowerCase();
+  const rules=[["Moodle LMS",/moodle|lms|course (page|content)|enrol/],["Assessment Portal (ExamSoft)",/examsoft|examplify|exam portal|assessment portal|exam software/],["Zoom / Video Conferencing",/zoom|webinar|video conferenc/],
+    ["Wi-Fi / Network",/wi-?fi|wireless|internet|network|ethernet|vpn/],["Printer / Peripheral",/printer|printing|scanner|toner|projector cable|keyboard|mouse/],["Classroom / AV Support",/projector|classroom|lecture hall|microphone|speaker|screen|smart ?board|av /],
+    ["Laptop / Device Issue",/laptop|computer|pc\b|desktop|tablet|device|battery/],["Microsoft 365",/microsoft|office 365|o365|teams|outlook|onedrive|sharepoint|word|excel|powerpoint/],["Google Workspace",/google (drive|docs|meet|classroom|workspace)|gmail|google account/],
+    ["Official / Institutional Email",/e-?mail|mailbox|password reset|mygmu|@gmu/]];
+  for(const r of rules) if(r[1].test(t)) return r[0];
+  return "Other / General Request";
+}
+function updateMailBadge(n){ const b=document.getElementById("navMail"); if(!b) return; b.textContent=n; b.style.display=n>0?"inline-block":"none";
+  if(n>0&&!MAIL.toldNew){ MAIL.toldNew=true; toast("📥 "+n+" e-mail request"+(n===1?" is":"s are")+" waiting for your decision.",6000); } }
+async function loadMail(){
+  const st=document.getElementById("mailFilter").value||"New", res=await api("getEmailRequests",{status:st});
+  if(!res.ok){ document.getElementById("mailStatus").innerHTML='<div class="mstat bad">'+esc(res.error||"Could not load the e-mails.")+'</div>'; return; }
+  MAIL.data=res; MAIL.sel={}; updateMailBadge(res.counts.New||0);
+  const f=document.getElementById("mailFilter"); f.options[0].textContent="Waiting for a decision ("+(res.counts.New||0)+")"; f.options[1].textContent="Made into tickets ("+(res.counts.Converted||0)+")"; f.options[2].textContent="Removed — not tickets ("+(res.counts.Dismissed||0)+")";
+  renderMailStatus(); renderMail();
+}
+function renderMailStatus(){
+  const d=MAIL.data, box=document.getElementById("mailStatus"); let html="";
+  if(!d.enabled) html='<div class="mstat">E-mail intake is <b>switched off</b>, so new e-mails are not being collected. '+(hasPerm("settings")?'Turn it on in <a href="#" onclick="nav(\'settings\');return false;">Settings → E-mail intake</a>.':'Ask an administrator to turn it on in Settings.')+'</div>';
+  else if(!d.gmail||d.error) html='<div class="mstat bad"><b>The mailbox is not being read.</b><br>'+esc(d.error||"The Gmail service is not switched on for this script.")+'</div>';
+  else html='<div class="mstat good">✓ Reading the support mailbox'+(d.lastCheck?' — last checked <b>'+esc(d.lastCheck.slice(11,16))+'</b> on '+esc(d.lastCheck.slice(0,10)):"")+'. It checks automatically every 5 minutes; press “Check mailbox now” for an immediate check.</div>';
+  box.innerHTML=html;
+}
+function mailCard(m){
+  const f=m.flags||{}, chips=[];
+  chips.push(f.ut==="Student"?'<span class="mchip">🎓 Student address</span>':f.ut==="Staff"?'<span class="mchip">👔 Staff address</span>':'<span class="mchip warn">⚠ Not an official GMU address</span>');
+  if(f.v==="pass") chips.push('<span class="mchip ok">✔ Sender verified</span>'); else if(f.v==="fail") chips.push('<span class="mchip warn">⚠ Could not be verified — possibly a fake sender</span>');
+  if(f.auto) chips.push('<span class="mchip auto">🤖 Looks automated</span>');
+  if(f.about) chips.push('<span class="mchip link" data-t="'+esc(f.about)+'" onclick="goTicket(this.dataset.t)">↩ About ticket '+esc(f.about)+'</span>');
+  if(m.attachments) chips.push('<span class="mchip">📎 '+esc(m.attachments)+' (not imported)</span>');
+  const who='<strong>'+esc(m.name||"(no name)")+'</strong> &lt;'+esc(m.email)+'&gt;';
+  const head='<div class="mhead">'+(m.status==="New"?'<input type="checkbox" class="msel" data-id="'+esc(m.id)+'" '+(MAIL.sel[m.id]?"checked":"")+' onchange="MAIL.sel[this.dataset.id]=this.checked"/>':"")+'<div class="mwho">'+who+'</div><div class="mwhen">'+esc(dt(m.received))+'</div></div>';
+  const body='<details class="mfull"><summary>Read the whole e-mail</summary><div class="mbody">'+esc(m.body)+'</div></details>';
+  let act="";
+  if(m.status==="New") act='<button class="btn btn-success" data-id="'+esc(m.id)+'" onclick="openConvert(this.dataset.id)">✅ Make ticket</button><button class="btn btn-outline" data-id="'+esc(m.id)+'" onclick="openDismiss(this.dataset.id)">🗑 Not a ticket</button>';
+  else if(m.status==="Converted") act='<span class="mchip ok">Ticket '+esc(m.ticketId)+'</span><span style="color:var(--muted);font-size:.8rem;">by '+esc(m.handledBy)+' · '+esc(dt(m.handledAt))+'</span><button class="btn btn-outline" data-t="'+esc(m.ticketId)+'" onclick="goTicket(this.dataset.t)">Open ticket</button>';
+  else act='<span style="color:var(--muted);font-size:.8rem;">Removed by '+esc(m.handledBy)+' · '+esc(dt(m.handledAt))+'</span><button class="btn btn-outline" data-id="'+esc(m.id)+'" onclick="restoreMail(this.dataset.id)">↩ Restore</button>';
+  return '<div class="mcard" data-id="'+esc(m.id)+'">'+head+'<div class="msub">'+esc(m.subject||"(no subject)")+'</div><div class="mexc">'+esc(clipText(m.body,220))+'</div><div class="mchips">'+chips.join("")+'</div>'+body+'<div class="marow">'+act+'</div></div>';
+}
+function mailShown(){
+  if(!MAIL.data) return []; const q=gv("mailSearch").toLowerCase(), hide=document.getElementById("mailHideAuto").checked;
+  return MAIL.data.items.filter(m=>!(hide&&m.flags&&m.flags.auto)&&(!q||[m.name,m.email,m.subject,m.body,m.ticketId].join(" ").toLowerCase().indexOf(q)>-1));
+}
+function renderMail(){
+  const items=mailShown(), st=document.getElementById("mailFilter").value||"New";
+  document.getElementById("mailBulkBtn").style.display=st==="New"?"":"none";
+  document.getElementById("mailList").innerHTML=items.length?items.map(mailCard).join(""):'<div class="no-tickets">'+(st==="New"?"Nothing is waiting — every e-mail has been dealt with. 🎉":"Nothing to show here.")+'</div>';
+}
+function mailSelectAll(){ mailShown().forEach(m=>{ if(m.status==="New") MAIL.sel[m.id]=true; }); renderMail(); }
+async function syncMail(fromSettings){
+  const b=document.getElementById("mailSyncBtn"); if(b){ b.disabled=true; b.textContent="Checking…"; }
+  const res=await api("syncInbox");
+  if(b){ b.disabled=false; b.textContent="🔄 Check mailbox now"; }
+  if(!res.ok) toast("❌ "+res.error,9000); else toast(res.skipped===true?"The mailbox was checked a moment ago.":"✅ "+(res.added||0)+" new e-mail"+(res.added===1?"":"s")+" listed.");
+  if(fromSettings) fillMailSettings(); else await loadMail();
+}
+/* Make a ticket */
+function openConvert(id){
+  const m=MAIL.data.items.find(x=>x.id===id); if(!m) return; MAIL.one=m;
+  document.getElementById("mcName").value=niceName(m.name,m.email);
+  document.getElementById("mcEmail").value=m.email;
+  document.getElementById("mcType").value=(m.flags&&m.flags.ut==="Staff")?"Staff":"Student";
+  document.getElementById("mcReg").value="";
+  document.getElementById("mcCat").innerHTML=CATS.map(c=>`<option>${esc(c)}</option>`).join("");
+  document.getElementById("mcCat").value=suggestCategory(m.subject+" "+m.body);
+  document.getElementById("mcPri").value="Medium";
+  const full="Subject: "+(m.subject||"(no subject)")+"\n\n"+m.body; document.getElementById("mcDesc").value=full.length>3000?full.slice(0,2960)+"\n…(the rest is in the e-mail list)":full;
+  const w=[]; if(m.flags&&m.flags.ut==="Outside") w.push("This e-mail came from an address that is <b>not an official GMU address</b>. Tickets need the person's official address — enter it below (or remove this e-mail if it is not a real request).");
+  if(m.flags&&m.flags.v==="fail") w.push("This sender <b>could not be verified</b> — the e-mail may be forged. Check it carefully before replying to the person.");
+  document.getElementById("mcWarn").innerHTML=w.map(x=>'<div class="mstat bad">⚠ '+x+'</div>').join("");
+  document.getElementById("mcErr").textContent=""; updateMcCount(); document.getElementById("mailModal").classList.add("on");
+}
+function updateMcCount(){ const n=document.getElementById("mcDesc").value.length; document.getElementById("mcCount").textContent=n+" / 3000 characters"; }
+async function submitConvert(){
+  const m=MAIL.one; if(!m) return; const e=document.getElementById("mcErr"); e.textContent="";
+  const name=gv("mcName"), email=gv("mcEmail").toLowerCase(), desc=document.getElementById("mcDesc").value.trim();
+  if(!okName(name)){ e.textContent="Please enter the person's name using letters only (no numbers, links or symbols)."; return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ e.textContent="Please enter a valid e-mail address."; return; }
+  if(desc.length<6){ e.textContent="The ticket needs a description."; return; }
+  const btn=document.getElementById("mcBtn"); btn.disabled=true;
+  const res=await api("convertEmail",{id:m.id,name:name,email:email,userType:gv("mcType"),regEmpId:gv("mcReg"),category:gv("mcCat"),priority:gv("mcPri"),description:desc});
+  btn.disabled=false;
+  if(!res.ok){ e.textContent=res.error; return; }
+  closeModal("mailModal"); toast("✅ Ticket "+res.ticketId+" created — "+name+" has been sent a confirmation."+(res.already?" (It had already been made into a ticket.)":""),7000);
+  await loadMail(); refresh();
+}
+/* Not a ticket */
+function openDismiss(id){
+  const ids=id?[id]:Object.keys(MAIL.sel).filter(k=>MAIL.sel[k]); if(!ids.length){ toast("Please tick the e-mails you want to remove first."); return; }
+  const one=ids.length===1?MAIL.data.items.find(x=>x.id===ids[0]):null;
+  if(ids.length===1&&!one){ toast("That e-mail is no longer in this list."); return; }
+  MAIL.dis=ids;
+  document.getElementById("mdText").textContent=ids.length===1?"Remove “"+clipText(one.subject||"(no subject)",60)+"” from "+(one.name||one.email)+"? It is not a ticket.":"Remove these "+ids.length+" e-mails? They are not tickets.";
+  const dom=one?String(one.email).split("@")[1]||"":"", official=/(^|\.)(mygmu\.ac\.ae|gmu\.ac\.ae|thumbay\.com)$/i.test(dom);
+  document.getElementById("mdSenderRow").style.display=one?"block":"none";
+  document.getElementById("mdDomainRow").style.display=(one&&dom&&!official)?"block":"none"; document.getElementById("mdDomain").textContent="@"+dom;
+  document.querySelector('input[name="mdBlock"][value=""]').checked=true; document.getElementById("mailDismissModal").classList.add("on");
+}
+async function submitDismiss(){
+  const block=(document.querySelector('input[name="mdBlock"]:checked')||{}).value||"";
+  const res=await api("dismissEmail",{ids:MAIL.dis,block:block||undefined});
+  if(!res.ok){ toast("❌ "+res.error); return; }
+  closeModal("mailDismissModal"); toast("🗑 "+res.dismissed+" e-mail"+(res.dismissed===1?"":"s")+" removed."+(block?" Future e-mails from "+(block==="domain"?"that domain":"that sender")+" will be ignored.":""));
+  await loadMail();
+}
+async function restoreMail(id){ const res=await api("restoreEmail",{id:id}); if(!res.ok){ toast("❌ "+res.error); return; } toast("↩ Restored — it is waiting for a decision again."); await loadMail(); }
+/* Settings → E-mail intake */
+let MAILBLOCK=[];
+async function fillMailSettings(){
+  const s=window._settings||{}; MAILBLOCK=[]; try{ MAILBLOCK=JSON.parse(s.mailBlock||"[]")||[]; }catch(e){}
+  document.getElementById("setMail").checked=(s.mailIntake==="1"); document.getElementById("setMailQuery").value=s.mailQuery||"";
+  renderBlockList(); document.getElementById("mailState").textContent=(s.mailIntake==="1")?"ON":"Off";
+  const box=document.getElementById("mailSetStatus"); box.style.display="none";
+  if(!hasPerm("view")) return;
+  try{ const r=await api("getEmailRequests",{status:"New"}); if(r.ok){ box.style.display="block"; box.className="mstat "+((r.enabled&&r.gmail&&!r.error)?"good":(r.enabled?"bad":""));
+    box.innerHTML=!r.enabled?"Currently off.":(!r.gmail||r.error)?"<b>Not working:</b> "+esc(r.error||"The Gmail service is not switched on."):"✓ Working"+(r.lastCheck?" — last checked "+esc(r.lastCheck):"")+"."; } }catch(e){}
+}
+function renderBlockList(){ const box=document.getElementById("mailBlockList"); box.textContent="";
+  if(!MAILBLOCK.length){ const e=document.createElement("span"); e.style.cssText="color:var(--muted);font-size:.82rem;"; e.textContent="None yet — use “Not a ticket → ignore future e-mails” on the E-mail Requests page."; box.appendChild(e); return; }
+  MAILBLOCK.forEach((x,i)=>{ const c=document.createElement("span"); c.className="mchip"; c.textContent=x+" ×"; c.style.cursor="pointer"; c.title="Stop ignoring this sender"; c.addEventListener("click",()=>{ MAILBLOCK.splice(i,1); renderBlockList(); }); box.appendChild(c); }); }
+async function saveMailSettings(){
+  const payload={mailIntake:document.getElementById("setMail").checked?"1":"0",mailQuery:gv("setMailQuery"),mailBlock:MAILBLOCK};
+  const res=await api("saveSettings",payload);
+  if(res.ok){ window._settings=Object.assign(window._settings||{},{mailIntake:payload.mailIntake,mailQuery:payload.mailQuery,mailBlock:JSON.stringify(MAILBLOCK)}); toast("✅ E-mail intake settings saved."+(payload.mailIntake==="1"?" Press “Check now” to try it.":"")); fillMailSettings(); }
+  else toast("❌ "+res.error);
+}
 
 /* ============ TICKET LOG — every ticket, live and archived ============ */
 const LOG={rows:[],view:[],shown:100,sort:{k:"timestamp",dir:-1},months:[],indexLoaded:false,cache:{},busy:false};
